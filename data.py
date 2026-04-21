@@ -1383,6 +1383,740 @@ REACTIONS = {
                            "same product; merged by physics engine.",
         },
     ],
+
+    # -----------------------------------------------------------------------
+    # HYDROGEN (H) — major constituent of water and concrete
+    # -----------------------------------------------------------------------
+    "H-1": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "H-2",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.3326, "sigma_2p5": 1.6e-4, "sigma_14": 9.8e-5},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "H-2 is stable. H-1 has the largest thermal neutron (n,γ) cross section "
+                           "among light elements: σ_th=0.3326 b. Relevant in water/concrete for "
+                           "neutron absorption bookkeeping but no activation dose contribution.",
+        },
+    ],
+    "H-2": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "H-3",
+            "cross_sections": {
+                "endf8": {"sigma_th": 5.19e-4, "sigma_2p5": 1.6e-6, "sigma_14": 5.5e-5},
+            },
+            "threshold":   None,
+            "t_half":      "12.32 y",
+            "t_half_s":    3.888e8,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "Tritium (H-3): pure β emitter (Emax=18.6 keV), no gamma. "
+                           "Zero external dose contribution. Key LLW waste concern in water-cooled "
+                           "systems and tritium-breeding blankets. H-2 natural abundance = 0.0115% "
+                           "(H-2 atom fraction in water ≈ 7.67×10⁻⁵). σ_th=0.000519 b.",
+            "waste_class":  {"tag": "LLW", "limit": "tritium: 40 Ci/m³ Class A (10 CFR 61); pure β — no external hazard"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # BORON (B) — in borosilicate glass, B₄C shielding, concrete admixtures
+    # -----------------------------------------------------------------------
+    "B-10": [
+        {
+            "reaction":    "(n,α)",
+            "product":     "Li-7",
+            "cross_sections": {
+                "endf8": {"sigma_th": 3840.0, "sigma_2p5": 0.227, "sigma_14": 0.1},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Li-7 is stable. B-10(n,α) has σ_th=3840 b — one of the largest thermal "
+                           "neutron capture cross sections. Dominates neutron absorption in B-containing "
+                           "materials. Prompt 478 keV gamma emitted in ~94% of reactions from Li-7* "
+                           "(not a decay gamma — not modeled here). Primary reaction for B₄C shielding.",
+        },
+        {
+            "reaction":    "(n,γ)",
+            "product":     "B-11",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.5, "sigma_2p5": 1.0e-3, "sigma_14": 1.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "B-11 is stable. Minor reaction vs (n,α) path.",
+        },
+    ],
+    "B-11": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "B-12",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.0055, "sigma_2p5": 5.0e-4, "sigma_14": 3.5e-3},
+            },
+            "threshold":   None,
+            "t_half":      "20.2 ms",
+            "t_half_s":    0.0202,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "B-12: t½=20.2 ms — far too short to contribute to shutdown dose. "
+                           "Negligible activation hazard.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # CARBON (C) — in carbon/stainless steel, concrete, polymers
+    # -----------------------------------------------------------------------
+    "C-12": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "C-13",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.00353, "sigma_2p5": 1.6e-5, "sigma_14": 3.0e-5},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "C-13 is stable. σ_th=3.53 mb — very small. No activation dose contribution.",
+        },
+    ],
+    "C-13": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "C-14",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.37e-3, "sigma_2p5": 5.0e-6, "sigma_14": 1.5e-5},
+            },
+            "threshold":   None,
+            "t_half":      "5730 y",
+            "t_half_s":    1.808e11,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "C-14: pure β emitter (Emax=156 keV), no gamma. t½=5730 y. "
+                           "Zero external dose. Important LLW waste classification concern for "
+                           "carbon-containing materials. C-13 σ_th=1.37 mb. "
+                           "N-14(n,p) route (σ_th=1.83 b) is far more prolific — see N-14 entry.",
+            "waste_class":  {"tag": "LLW", "limit": "C-14: 80 Ci/m³ Class B (10 CFR 61); pure β — no external dose"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # CALCIUM (Ca) — bulk constituent of concrete (~13 wt%)
+    # Ca-48 already in REACTIONS above
+    # -----------------------------------------------------------------------
+    "Ca-40": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ca-41",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.41, "sigma_2p5": 5.0e-4, "sigma_14": 4.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "1.03e5 y",
+            "t_half_s":    3.25e12,
+            "decay_mode":  "EC",
+            "gammas":      [],
+            "notes":       "Ca-41: t½=1.03×10⁵ y, EC decay to K-41 (stable). Pure EC emitter — "
+                           "no gamma, no beta. Zero external dose but very long-lived LLW concern. "
+                           "Ca-40 = 96.94% of natural Ca. σ_th=0.41 b.",
+        },
+    ],
+    "Ca-42": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ca-43",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.68, "sigma_2p5": 1.0e-3, "sigma_14": 6.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Ca-43 is stable. Ca-42 = 0.647% of natural Ca. σ_th=0.68 b.",
+        },
+    ],
+    "Ca-43": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ca-44",
+            "cross_sections": {
+                "endf8": {"sigma_th": 6.2, "sigma_2p5": 5.0e-3, "sigma_14": 1.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Ca-44 is stable. Ca-43 = 0.135% of natural Ca. Relatively large σ_th=6.2 b.",
+        },
+    ],
+    "Ca-44": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ca-45",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.88, "sigma_2p5": 1.5e-3, "sigma_14": 4.5e-4},
+            },
+            "threshold":   None,
+            "t_half":      "162.67 d",
+            "t_half_s":    1.405e7,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "Ca-45: pure β emitter (Emax=257 keV), no gamma. t½=162.7 d. "
+                           "Zero external dose but moderate half-life. Ca-44 = 2.086% natural Ca.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # POTASSIUM (K) — K-39 complement to K-41 already in REACTIONS
+    # -----------------------------------------------------------------------
+    "K-39": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "K-40",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.1, "sigma_2p5": 3.0e-3, "sigma_14": 2.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "1.248e9 y",
+            "t_half_s":    3.938e16,
+            "decay_mode":  "β⁻/EC",
+            "gammas":      [[1460.82, 10.66]],
+            "notes":       "K-40: t½=1.248×10⁹ y — effectively stable for activation purposes "
+                           "(primordial nuclide). The 1460.8 keV gamma (10.7%) is the signature of "
+                           "natural K-40 background. Activation contribution from K-39(n,γ) is "
+                           "negligible relative to the natural K-40 already present in concrete. "
+                           "K-39 = 93.26% of natural K. σ_th=2.1 b.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # MAGNESIUM (Mg) — minor constituent of concrete (~0.2 wt%) and Al alloys
+    # -----------------------------------------------------------------------
+    "Mg-24": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mg-25",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.0505, "sigma_2p5": 1.5e-4, "sigma_14": 1.2e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Mg-25 is stable. Mg-24 = 78.99% of natural Mg. σ_th=0.0505 b (small).",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Na-24",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.189},
+            },
+            "threshold":   4.93,
+            "t_half":      "14.957 h",
+            "t_half_s":    53845.2,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1368.63, 100.0], [2754.03, 99.855]],
+            "notes":       "Mg-24(n,p)→Na-24 at 14 MeV. σ_14≈0.189 b. Same product as "
+                           "Al-27(n,α)→Na-24. Na-24 (14.96 h, two high-energy gammas) is the "
+                           "dominant short-term dose contributor in Mg and Al-rich materials.",
+        },
+    ],
+    "Mg-25": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mg-26",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.190, "sigma_2p5": 5.0e-4, "sigma_14": 2.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Mg-26 is stable. Mg-25 = 10.00% of natural Mg.",
+        },
+    ],
+    "Mg-26": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mg-27",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.0382, "sigma_2p5": 1.5e-4, "sigma_14": 1.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "9.458 min",
+            "t_half_s":    567.5,
+            "decay_mode":  "β⁻",
+            "gammas":      [[843.76, 71.8], [1014.52, 28.2]],
+            "notes":       "Mg-27: same product as Al-27(n,p)→Mg-27. t½=9.46 min. "
+                           "Merged with Al-27(n,p) path by physics engine. Mg-26 = 11.01% natural Mg.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # MOLYBDENUM (Mo) — Mo-94/95/96/97 complement to Mo-92/98/100 in REACTIONS
+    # -----------------------------------------------------------------------
+    "Mo-94": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mo-95",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.020, "sigma_2p5": 8.0e-4, "sigma_14": 3.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Mo-95 is stable. Mo-94 = 9.15% of natural Mo. σ_th=0.020 b (small).",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Nb-94",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.065},
+            },
+            "threshold":   5.5,
+            "t_half":      "2.03e4 y",
+            "t_half_s":    6.40e11,
+            "decay_mode":  "β⁻",
+            "gammas":      [[702.63, 99.81], [871.09, 99.90]],
+            "notes":       "Mo-94(n,p)→Nb-94 at 14 MeV. σ_14≈0.065 b. CRITICAL LLW concern: "
+                           "t½=20,300 y, two near-100% gammas. NRC Class C limit = 0.2 Ci/m³ — "
+                           "among the most restrictive. Activated SS-316 Mo-content can approach "
+                           "Class C at high 14 MeV fluence.",
+            "waste_class":  {"tag": "NRC Class C", "limit": "Nb-94: 0.2 Ci/m³ (10 CFR 61 Table 2); 20,300 y half-life"},
+        },
+    ],
+    "Mo-95": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mo-96",
+            "cross_sections": {
+                "endf8": {"sigma_th": 13.4, "sigma_2p5": 0.020, "sigma_14": 2.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Mo-96 is stable. Mo-95 = 15.84% natural Mo. Large σ_th=13.4 b — "
+                           "significant thermal neutron absorber in Mo-rich materials.",
+        },
+    ],
+    "Mo-96": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mo-97",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.50, "sigma_2p5": 3.0e-3, "sigma_14": 5.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Mo-97 is stable. Mo-96 = 16.67% natural Mo.",
+        },
+    ],
+    "Mo-97": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mo-98",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.5, "sigma_2p5": 8.0e-3, "sigma_14": 1.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Mo-98 is stable. Mo-97 = 9.60% natural Mo. σ_th=2.5 b moderate.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # NICKEL Ni-61 — complement to Ni-58/60/62/64 in REACTIONS
+    # -----------------------------------------------------------------------
+    "Ni-61": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ni-62",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.5, "sigma_2p5": 5.0e-3, "sigma_14": 2.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Ni-62 is stable. Ni-61 = 1.140% of natural Ni. σ_th=2.5 b.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # OXYGEN O-18 — complement to O-16, O-17 in REACTIONS
+    # -----------------------------------------------------------------------
+    "O-18": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "O-19",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.6e-4, "sigma_2p5": 5.0e-7, "sigma_14": 2.0e-6},
+            },
+            "threshold":   None,
+            "t_half":      "26.9 s",
+            "t_half_s":    26.9,
+            "decay_mode":  "β⁻",
+            "gammas":      [[197.14, 96.7]],
+            "notes":       "O-19: t½=26.9 s — very short, dose gone within minutes of shutdown. "
+                           "σ_th=0.00016 b — tiny cross section. Negligible activation contribution "
+                           "in all practical scenarios.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # PHOSPHORUS (P) — trace in SS and carbon steel (≤0.045 wt%)
+    # -----------------------------------------------------------------------
+    "P-31": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "P-32",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.172, "sigma_2p5": 5.0e-4, "sigma_14": 2.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "14.268 d",
+            "t_half_s":    1.233e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "P-32: pure β emitter (Emax=1710 keV), no gamma. t½=14.27 d. "
+                           "Zero external dose contribution. Relevant as a pure beta contaminant "
+                           "in activated steel. P-31 = 100% of natural P. σ_th=0.172 b.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # LEAD (Pb) — primary shielding material
+    # -----------------------------------------------------------------------
+    "Pb-204": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Pb-205",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.65, "sigma_2p5": 4.0e-3, "sigma_14": 1.5e-3},
+            },
+            "threshold":   None,
+            "t_half":      "1.53e7 y",
+            "t_half_s":    4.83e14,
+            "decay_mode":  "EC",
+            "gammas":      [],
+            "notes":       "Pb-205: t½=1.53×10⁷ y, pure EC. No gamma, effectively stable. "
+                           "Pb-204 = 1.4% of natural Pb.",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Pb-203",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.0},
+            },
+            "threshold":   7.88,
+            "t_half":      "51.873 h",
+            "t_half_s":    1.867e5,
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[279.19, 80.9], [401.32, 3.35], [680.51, 2.09]],
+            "notes":       "Pb-203: key activation product in Pb shielding at 14 MeV. σ_14≈2.0 b. "
+                           "279 keV gamma (81%) is the dominant dose contributor from activated lead. "
+                           "t½=51.9 h makes this a medium-term shutdown hazard.",
+        },
+    ],
+    "Pb-206": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Pb-207m",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.030, "sigma_2p5": 2.0e-4, "sigma_14": 5.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "0.806 s",
+            "t_half_s":    0.806,
+            "decay_mode":  "IT",
+            "gammas":      [[569.70, 97.8], [1063.66, 74.5]],
+            "notes":       "Pb-207m: t½=0.806 s, IT to Pb-207 (stable). Too short for shutdown dose. "
+                           "Pb-206 = 24.1% of natural Pb. σ_th=0.030 b.",
+        },
+    ],
+    "Pb-207": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Pb-208",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.699, "sigma_2p5": 2.0e-3, "sigma_14": 8.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Pb-208 is stable (doubly magic). Pb-207 = 22.1% of natural Pb. σ_th=0.699 b.",
+        },
+    ],
+    "Pb-208": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Pb-209",
+            "cross_sections": {
+                "endf8": {"sigma_th": 4.7e-4, "sigma_2p5": 3.0e-6, "sigma_14": 3.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "3.253 h",
+            "t_half_s":    11711.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "Pb-209: pure β emitter (Emax=644 keV), no gamma. t½=3.25 h. "
+                           "Pb-208 is doubly magic → extremely small σ_th=0.00047 b. "
+                           "Negligible contribution in all practical scenarios. Pb-208 = 52.4% natural Pb.",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Pb-207",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.3},
+            },
+            "threshold":   7.36,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Pb-208(n,2n)→Pb-207 (stable). σ_14≈2.3 b — large fast cross section "
+                           "but product is stable. Important for neutron multiplication in lead.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # SULFUR (S) — trace in SS baseline and carbon steel
+    # -----------------------------------------------------------------------
+    "S-32": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "S-33",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.54, "sigma_2p5": 1.5e-3, "sigma_14": 2.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "S-33 is stable. S-32 = 94.99% of natural S. σ_th=0.54 b.",
+        },
+    ],
+    "S-33": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "S-34",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.46, "sigma_2p5": 1.5e-3, "sigma_14": 2.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "S-34 is stable. S-33 = 0.75% of natural S.",
+        },
+    ],
+    "S-34": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "S-35",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.23, "sigma_2p5": 5.0e-4, "sigma_14": 1.5e-4},
+            },
+            "threshold":   None,
+            "t_half":      "87.51 d",
+            "t_half_s":    7.561e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "S-35: pure β emitter (Emax=167 keV), no gamma. t½=87.5 d. "
+                           "Zero external dose. S-34 = 4.25% of natural S. σ_th=0.23 b.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # SILICON Si-29 — complement to Si-28 and Si-30 in REACTIONS
+    # -----------------------------------------------------------------------
+    "Si-29": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Si-30",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.101, "sigma_2p5": 3.0e-4, "sigma_14": 1.5e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Si-30 is stable. Si-29 = 4.685% of natural Si. σ_th=0.101 b.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # TITANIUM Ti-46, Ti-49 — complement to Ti-47/48/50 in REACTIONS
+    # -----------------------------------------------------------------------
+    "Ti-46": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ti-47",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.59, "sigma_2p5": 2.0e-3, "sigma_14": 1.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Ti-47 is stable. Ti-46 = 8.25% of natural Ti. σ_th=0.59 b.",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Sc-46",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.020},
+            },
+            "threshold":   3.65,
+            "t_half":      "83.79 d",
+            "t_half_s":    7.239e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[889.28, 99.98], [1120.55, 99.99]],
+            "notes":       "Ti-46(n,p)→Sc-46 at 14 MeV. σ_14≈0.020 b. Two near-100% gammas "
+                           "make Sc-46 a notable medium-term dose contributor in Ti-rich materials. "
+                           "Ti-46(n,p) is the dominant fast-neutron activation path in Ti alloys "
+                           "(complementing Ti-48(n,p)→Sc-48 already in REACTIONS).",
+        },
+    ],
+    "Ti-49": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ti-50",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.80, "sigma_2p5": 5.0e-3, "sigma_14": 2.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Ti-50 is stable. Ti-49 = 5.41% of natural Ti. σ_th=1.80 b.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # VANADIUM V-50 — complement to V-51 in REACTIONS
+    # -----------------------------------------------------------------------
+    "V-50": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "V-51",
+            "cross_sections": {
+                "endf8": {"sigma_th": 60.0, "sigma_2p5": 0.20, "sigma_14": 0.05},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "V-51 is stable. V-50 = 0.250% of natural V — very low abundance. "
+                           "Large resonance σ_th≈60 b but negligible effect due to 0.25% abundance. "
+                           "Effective contribution = 60 × 0.0025 ≈ 0.15 b per natural V atom.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # ZINC Zn-66/67/68/70 — complement to Zn-64 in REACTIONS
+    # -----------------------------------------------------------------------
+    "Zn-66": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Zn-67",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.62, "sigma_2p5": 3.0e-3, "sigma_14": 5.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Zn-67 is stable. Zn-66 = 27.73% of natural Zn. σ_th=0.62 b.",
+        },
+    ],
+    "Zn-67": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Zn-68",
+            "cross_sections": {
+                "endf8": {"sigma_th": 6.9, "sigma_2p5": 0.020, "sigma_14": 2.0e-3},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "Stable",
+            "gammas":      [],
+            "notes":       "Zn-68 is stable. Zn-67 = 4.04% of natural Zn. Large σ_th=6.9 b.",
+        },
+    ],
+    "Zn-68": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Zn-69m",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.0, "sigma_2p5": 4.0e-3, "sigma_14": 6.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "13.756 h",
+            "t_half_s":    49522.0,
+            "decay_mode":  "β⁻ (via IT)",
+            "gammas":      [[438.63, 94.85]],
+            "notes":       "Zn-69m (metastable, t½=13.76 h) decays by IT to Zn-69 (56 min), "
+                           "which decays by β⁻ to Ga-69 (stable). The 438.6 keV gamma (94.85%) "
+                           "from IT is the dominant emission. Zn-68 = 18.45% of natural Zn. σ_th≈1.0 b. "
+                           "Important in Zn-containing materials at moderate to high fluence.",
+        },
+    ],
+    "Zn-70": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Zn-71m",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.092, "sigma_2p5": 3.0e-4, "sigma_14": 2.0e-4},
+            },
+            "threshold":   None,
+            "t_half":      "3.97 h",
+            "t_half_s":    14292.0,
+            "decay_mode":  "β⁻ (via IT)",
+            "gammas":      [[386.28, 89.8], [487.38, 61.1]],
+            "notes":       "Zn-71m (metastable): t½=3.97 h, β⁻ to Ga-71 (stable). "
+                           "Two dominant gammas at 386 and 487 keV. "
+                           "Zn-70 = 0.61% of natural Zn — low abundance limits contribution. σ_th=0.092 b.",
+        },
+    ],
 }
 
 # ---------------------------------------------------------------------------
@@ -1405,21 +2139,21 @@ MATERIALS = {
         "density_g_cc": 7.93,
         "isotopes": {
             # Iron (72 wt% → 70.88 atom%)
-            "Fe-54": 0.04168, "Fe-56": 0.65424, "Fe-57": 0.01511, "Fe-58": 0.00201,
+            "Fe-54": 0.0406706, "Fe-56": 0.638395, "Fe-57": 0.0147441, "Fe-58": 0.00196132,
             # Chromium (18 wt% → 19.03 atom%)
-            "Cr-50": 0.00833, "Cr-52": 0.16054, "Cr-53": 0.01821, "Cr-54": 0.00453,
+            "Cr-50": 0.00812826, "Cr-52": 0.156652, "Cr-53": 0.017769, "Cr-54": 0.00442029,
             # Nickel (8 wt% → 7.47 atom%)
-            "Ni-58": 0.05129, "Ni-60": 0.01975, "Ni-61": 0.00086, "Ni-62": 0.00274, "Ni-64": 0.00070,
+            "Ni-58": 0.0500478, "Ni-60": 0.0192717, "Ni-61": 8.392e-04, "Ni-62": 0.00267364, "Ni-64": 0.00070,
             # Manganese (2 wt% → 2.00 atom%; 100% Mn-55)
-            "Mn-55": 0.02015,
+            "Mn-55": 0.019662,
             # Carbon (≤0.08 wt% → ~0.36 atom%; 98.9% C-12)
-            "C-12": 0.00363, "C-13": 0.00004,
+            "C-12": 0.00354209, "C-13": 0.00004,
             # Silicon (≤1.0 wt% → ~1.96 atom%; natural isotopics)
-            "Si-28": 0.01817, "Si-29": 0.00092, "Si-30": 0.00061,
+            "Si-28": 0.0177299, "Si-29": 8.977e-04, "Si-30": 5.952e-04,
             # Phosphorus (≤0.045 wt% → ~0.080 atom%; 100% P-31)
-            "P-31": 0.00079,
+            "P-31": 7.709e-04,
             # Sulfur (≤0.030 wt% → ~0.051 atom%; natural isotopics, dominated by S-32)
-            "S-32": 0.00049, "S-33": 0.00000, "S-34": 0.00003,
+            "S-32": 4.781e-04, "S-33": 0.00000, "S-34": 0.00003,
         },
     },
     "Stainless Steel 304": {
@@ -1446,27 +2180,27 @@ MATERIALS = {
         "density_g_cc": 7.93,
         "isotopes": {
             # Iron (72 wt% → ~70.8 atom% after Co adjustment)
-            "Fe-54": 0.04168,
-            "Fe-56": 0.65424,
-            "Fe-57": 0.01511,
-            "Fe-58": 0.00201,
+            "Fe-54": 0.0416205,
+            "Fe-56": 0.653306,
+            "Fe-57": 0.0150884,
+            "Fe-58": 0.00200713,
             # Chromium (18 wt% → 19.0 atom%)
-            "Cr-50": 0.00832,
-            "Cr-52": 0.16042,
-            "Cr-53": 0.01819,
-            "Cr-54": 0.00453,
+            "Cr-50": 0.00830812,
+            "Cr-52": 0.160191,
+            "Cr-53": 0.018164,
+            "Cr-54": 0.00452353,
             # Nickel (8 wt% → 7.5 atom%; all 5 stable isotopes)
-            "Ni-58": 0.05132,
-            "Ni-60": 0.01977,
-            "Ni-61": 0.00086,
-            "Ni-62": 0.00274,
+            "Ni-58": 0.0512467,
+            "Ni-60": 0.0197418,
+            "Ni-61": 8.588e-04,
+            "Ni-62": 0.00273609,
             "Ni-64": 0.00070,
             # Manganese (2 wt% → 2.0 atom%; Mn-55 = 100% natural abundance)
-            "Mn-55": 0.02013,
+            "Mn-55": 0.0201013,
             # Cobalt impurity — CRITICAL: modeled at ~1500 ppm (commercial SS-304)
             # f_Co59 ≈ 0.0015/58.933 / (sum_of_all_moles) ≈ 1.40×10⁻³
             # (sum ≈ 0.018079 mol/g → f_Co59 = 2.546e-5/0.018079 ≈ 1.41e-3)
-            "Co-59": 0.00141,
+            "Co-59": 0.00140799,
         },
     },
     "Stainless Steel 316 (commercial)": {
@@ -1488,34 +2222,34 @@ MATERIALS = {
         "density_g_cc": 7.98,
         "isotopes": {
             # Iron (65 wt% → 66.1 atom%)
-            "Fe-54": 0.03863,
-            "Fe-56": 0.60614,
+            "Fe-54": 0.038659,
+            "Fe-56": 0.606595,
             "Fe-57": 0.01400,
-            "Fe-58": 0.00186,
+            "Fe-58": 0.00186139,
             # Chromium (17 wt% → 18.6 atom%)
-            "Cr-50": 0.00807,
-            "Cr-52": 0.15555,
-            "Cr-53": 0.01764,
-            "Cr-54": 0.00439,
+            "Cr-50": 0.00807605,
+            "Cr-52": 0.155667,
+            "Cr-53": 0.0176532,
+            "Cr-54": 0.00439329,
             # Nickel (12 wt% → 11.6 atom%)
-            "Ni-58": 0.07901,
-            "Ni-60": 0.03042,
-            "Ni-61": 0.00132,
-            "Ni-62": 0.00422,
-            "Ni-64": 0.00107,
+            "Ni-58": 0.0790692,
+            "Ni-60": 0.0304428,
+            "Ni-61": 0.00132099,
+            "Ni-62": 0.00422316,
+            "Ni-64": 0.0010708,
             # Molybdenum (2.5 wt% → 1.48 atom%)
-            "Mo-92": 0.00215,
-            "Mo-94": 0.00136,
-            "Mo-95": 0.00234,
-            "Mo-96": 0.00246,
-            "Mo-97": 0.00142,
-            "Mo-98": 0.00361,
-            "Mo-100": 0.00145,
+            "Mo-92": 0.00215161,
+            "Mo-94": 0.00136102,
+            "Mo-95": 0.00234175,
+            "Mo-96": 0.00246184,
+            "Mo-97": 0.00142106,
+            "Mo-98": 0.00361271,
+            "Mo-100": 0.00145109,
             # Manganese (2 wt% → 2.07 atom%)
-            "Mn-55": 0.02066,
+            "Mn-55": 0.0206755,
             # Cobalt — CRITICAL impurity modeled at 1500 ppm (commercial grade)
             # f_Co59 ≈ 1.45×10⁻³ (from wt% → atom% calculation)
-            "Co-59": 0.00145,
+            "Co-59": 0.00145109,
             # Niobium — impurity modeled at 50 ppm (typical virgin SS-316)
             # f_Nb93 ≈ 3.1×10⁻⁵
             "Nb-93": 0.0000307,
@@ -1540,53 +2274,33 @@ MATERIALS = {
         "density_g_cc": 7.98,
         "isotopes": {
             # Fe, Cr, Ni, Mo, Mn — identical to SS-316 (commercial)
-            "Fe-54": 0.03863,
-            "Fe-56": 0.60614,
+            "Fe-54": 0.0387121,
+            "Fe-56": 0.607429,
             "Fe-57": 0.01400,
-            "Fe-58": 0.00186,
-            "Cr-50": 0.00807,
-            "Cr-52": 0.15555,
-            "Cr-53": 0.01764,
-            "Cr-54": 0.00439,
-            "Ni-58": 0.07901,
-            "Ni-60": 0.03042,
-            "Ni-61": 0.00132,
-            "Ni-62": 0.00422,
-            "Ni-64": 0.00107,
-            "Mo-92": 0.00215,
-            "Mo-94": 0.00136,
-            "Mo-95": 0.00234,
-            "Mo-96": 0.00246,
-            "Mo-97": 0.00142,
-            "Mo-98": 0.00361,
-            "Mo-100": 0.00145,
-            "Mn-55": 0.02066,
+            "Fe-58": 0.00186395,
+            "Cr-50": 0.00808716,
+            "Cr-52": 0.155881,
+            "Cr-53": 0.0176775,
+            "Cr-54": 0.00439933,
+            "Ni-58": 0.079178,
+            "Ni-60": 0.0304847,
+            "Ni-61": 0.00132281,
+            "Ni-62": 0.00422897,
+            "Ni-64": 0.00107228,
+            "Mo-92": 0.00215457,
+            "Mo-94": 0.00136289,
+            "Mo-95": 0.00234498,
+            "Mo-96": 0.00246523,
+            "Mo-97": 0.00142302,
+            "Mo-98": 0.00361768,
+            "Mo-100": 0.00145308,
+            "Mn-55": 0.0207039,
             # Cobalt — nuclear grade: ≤100 ppm
             # f_Co59 ≈ 9.6×10⁻⁵
             "Co-59": 0.0000960,
             # Niobium — scrap-free melt: ~20 ppm
             # f_Nb93 ≈ 1.2×10⁻⁵
             "Nb-93": 0.0000122,
-        },
-    },
-    "Carbon Steel (A36)": {
-        "category":    "steel",
-        "description": "ASTM A36 structural carbon steel. Nominal: 98.5 wt% Fe, 1.5 wt% Mn (C/Si traces not "
-                       "modeled). Atom fractions from wt% → atom% conversion. Sum = 1.",
-        "impurities": {
-            "Co": {"ppm_range": [93, 151], "significance": "high",
-                   "note": "Co-59(n,γ)→Co-60 long-term dose driver; lower Co than SS-316 (~150 ppm typical "
-                           "vs up to 2570 ppm) but still significant for long-term waste classification."},
-        },
-        "density_g_cc": 7.85,
-        "isotopes": {
-            # Iron (98.5 wt% → 98.48 atom%)
-            "Fe-54": 0.05756,
-            "Fe-56": 0.90355,
-            "Fe-57": 0.02087,
-            "Fe-58": 0.00278,
-            # Manganese (1.5 wt% → 1.52 atom%)
-            "Mn-55": 0.01524,
         },
     },
 
@@ -1834,20 +2548,20 @@ MATERIALS = {
         "density_g_cc": 7.85,
         "isotopes": {
             # Iron (97.13 wt% after impurities → 97.11 atom%)
-            "Fe-54": 0.05677, "Fe-56": 0.89123, "Fe-57": 0.02060, "Fe-58": 0.00274,
+            "Fe-54": 0.0565259, "Fe-56": 0.887399, "Fe-57": 0.02060, "Fe-58": 0.00272822,
             # Manganese (1.0 wt% → 1.017 atom%)
-            "Mn-55": 0.01017,
+            "Mn-55": 0.0101263,
             # Carbon (0.25 wt% → 1.158 atom%)
-            "C-12": 0.01146, "C-13": 0.000123,
+            "C-12": 0.0114107, "C-13": 1.225e-04,
             # Silicon (0.40 wt% → 0.795 atom%)
-            "Si-28": 0.00733, "Si-29": 0.000371, "Si-30": 0.000247,
+            "Si-28": 0.00729849, "Si-29": 3.694e-04, "Si-30": 2.459e-04,
             # Co impurity — 2000 ppm (conservative scrap-origin)
             # f_Co = (2e-3/58.933) / (0.985/55.845 + 0.010/54.938 + ...) ≈ 0.00189
-            "Co-59": 0.00189,
+            "Co-59": 0.00188188,
             # Cu impurity — 1000 ppm
-            "Cu-63": 0.000479, "Cu-65": 0.000213,
+            "Cu-63": 4.769e-04, "Cu-65": 2.121e-04,
             # Ni impurity — 1000 ppm
-            "Ni-58": 0.000473, "Ni-60": 0.000182, "Ni-61": 0.0000079,
+            "Ni-58": 4.710e-04, "Ni-60": 1.812e-04, "Ni-61": 0.0000079,
             "Ni-62": 0.0000252, "Ni-64": 0.0000064,
         },
     },
@@ -2098,26 +2812,26 @@ MATERIALS = {
         "density_g_cc": 2.30,
         "isotopes": {
             # Hydrogen (0.6 wt% → 11.02 atom%)
-            "H-1": 0.11022,
+            "H-1": 0.110057,
             # Oxygen (53.0 wt% → 61.34 atom%)
-            "O-16": 0.61341, "O-17": 0.000234, "O-18": 0.001258,
+            "O-16": 0.612505, "O-17": 2.337e-04, "O-18": 0.00125614,
             # Sodium (0.08 wt% → 0.064 atom%)
-            "Na-23": 0.000644,
+            "Na-23": 6.431e-04,
             # Magnesium (0.1 wt% → 0.076 atom%)
-            "Mg-24": 0.000601, "Mg-25": 0.000076, "Mg-26": 0.000084,
+            "Mg-24": 6.001e-04, "Mg-25": 0.000076, "Mg-26": 0.000084,
             # Aluminum (1.0 wt% → 0.687 atom%)
             "Al-27": 0.006870,
             # Silicon (6.3 wt% → 4.153 atom%)
-            "Si-28": 0.038298, "Si-29": 0.001939, "Si-30": 0.001287,
+            "Si-28": 0.0382415, "Si-29": 0.00193614, "Si-30": 0.0012851,
             # Potassium (0.2 wt% → 0.095 atom%)
-            "K-39": 0.000886, "K-41": 0.000064,
+            "K-39": 8.847e-04, "K-41": 0.000064,
             # Calcium (30.6 wt% → 14.138 atom%) — major component in limestone aggregate
-            "Ca-40": 0.137070, "Ca-42": 0.000914, "Ca-43": 0.000191,
-            "Ca-44": 0.002949, "Ca-48": 0.000264,
+            "Ca-40": 0.137070, "Ca-42": 9.127e-04, "Ca-43": 1.907e-04,
+            "Ca-44": 0.00294465, "Ca-48": 2.636e-04,
             # Iron (0.3 wt% → 0.099 atom%)
             "Fe-54": 0.0000580, "Fe-56": 0.000910, "Fe-57": 0.0000210, "Fe-58": 0.0000028,
             # Carbon (5.4 wt% → 8.325 atom%) — from CaCO3 limestone
-            "C-12": 0.082337, "C-13": 0.000887,
+            "C-12": 0.0822156, "C-13": 8.857e-04,
             # TRACE IMPURITIES — reduced vs. OPC (Eu 0.2 ppm, Co 3 ppm, Cs 1 ppm, Sc 3 ppm)
             "Eu-151": 0.0000000112, "Eu-153": 0.0000000122,  # 0.2 ppm total Eu
             "Co-59": 0.0000009,     # 3 ppm Co
@@ -2160,8 +2874,9 @@ MATERIALS = {
 
     "Water (H2O)": {
         "category":    "moderator",
-        "description": "Liquid water — natural isotopic composition. H-1 (99.985%), H-2 (0.015%), "
-                       "O-16 (99.757%), O-17 (0.038%), O-18 (0.205%). Density 1.00 g/cm³. "
+        "description": "Liquid water — natural isotopic composition (IUPAC 2021). "
+                       "H-1 (99.9885%), H-2 (0.01150%), "
+                       "O-16 (99.757%), O-17 (0.0380%), O-18 (0.205%). Density 1.00 g/cm³. "
                        "No significant long-lived gamma emitters from pure water activation. "
                        "N-16 from O-16(n,p) at 14 MeV dominates all online/prompt dose "
                        "but is gone within 2 minutes of shutdown (t½=7.13 s). "
@@ -2179,12 +2894,14 @@ MATERIALS = {
         "isotopes": {
             # Hydrogen (11.19 wt% → 66.67 atom% of H2O by molecule)
             # In H2O: 2 H per O → H atom fraction = 2/3 = 0.66667
-            "H-1": 0.66557,   # 99.985% of H × 2/3
-            "H-2": 0.000100,  # 0.015% of H × 2/3
+            # IUPAC 2021: H-1 = 99.9885%, H-2 = 0.01150%
+            "H-1": 0.66659,   # 0.999885 × 2/3
+            "H-2": 0.0000767, # 0.000115 × 2/3
             # Oxygen (88.81 wt% → 33.33 atom%)
-            "O-16": 0.33252,  # 99.757% of O × 1/3
-            "O-17": 0.000127, # 0.038% of O × 1/3
-            "O-18": 0.000683, # 0.205% of O × 1/3
+            # IUPAC 2021: O-16 = 99.757%, O-17 = 0.0380%, O-18 = 0.2050%
+            "O-16": 0.33252,  # 0.99757 × 1/3
+            "O-17": 0.000127, # 0.000380 × 1/3
+            "O-18": 0.000683, # 0.00205 × 1/3
         },
     },
 
@@ -2356,31 +3073,33 @@ ISOTOPE_MASS = {
 
 ICRP74_H10 = [
     # (energy_MeV, h_star_10 in pSv·cm²)
+    # Source: ICRP Publication 74 (1996), Table A.21
+    # H*(10)/Φ conversion coefficients for photons, isotropic field
     (0.010,  0.0061),
-    (0.015,  0.0830),
-    (0.020,  0.169),
-    (0.030,  0.306),
-    (0.040,  0.370),
-    (0.050,  0.391),
-    (0.060,  0.401),
-    (0.080,  0.438),
-    (0.100,  0.522),
-    (0.150,  0.749),
-    (0.200,  1.000),
-    (0.300,  1.510),
-    (0.400,  1.990),
-    (0.500,  2.440),
-    (0.600,  2.870),
-    (0.800,  3.690),
-    (1.000,  4.400),
-    (1.500,  5.870),
-    (2.000,  6.940),
-    (3.000,  8.550),
-    (4.000,  9.730),
-    (5.000,  10.60),
-    (6.000,  11.30),
-    (8.000,  12.40),
-    (10.00,  13.20),
+    (0.015,  0.083),
+    (0.020,  0.28),
+    (0.030,  0.87),
+    (0.040,  1.50),
+    (0.050,  2.09),
+    (0.060,  2.61),
+    (0.080,  3.43),
+    (0.100,  4.03),
+    (0.150,  5.20),
+    (0.200,  5.98),
+    (0.300,  7.00),
+    (0.400,  7.74),
+    (0.500,  8.35),
+    (0.600,  8.85),
+    (0.800,  9.73),
+    (1.000,  10.5),
+    (1.500,  11.7),
+    (2.000,  12.5),
+    (3.000,  14.2),
+    (4.000,  15.6),
+    (5.000,  16.8),
+    (6.000,  17.8),
+    (8.000,  19.5),
+    (10.00,  21.1),
 ]
 
 
@@ -2402,13 +3121,26 @@ def _load_extracted_3pt():
         "fendl32c": _os.path.join(_DATA_DIR, "fendl_3pt.json"),
     }
 
+    _missing = [fpath for fpath in _FILE_MAP.values() if not _os.path.isfile(fpath)]
+    if _missing:
+        import warnings as _warnings
+        for _fp in _missing:
+            _warnings.warn(
+                f"data.py: cross-section JSON not found: {_fp}\n"
+                "  Falling back to hardcoded values (for documentation only — may be inaccurate).\n"
+                "  Run: python tools/extract_pointwise_3pt.py  (requires downloaded pointwise files)",
+                RuntimeWarning, stacklevel=2,
+            )
+
     for lib_key, fpath in _FILE_MAP.items():
         if not _os.path.isfile(fpath):
             continue
         try:
             with open(fpath) as _f:
                 extracted = json.load(_f)
-        except Exception:
+        except Exception as _e:
+            import warnings as _warnings
+            _warnings.warn(f"data.py: failed to load {fpath}: {_e}", RuntimeWarning, stacklevel=2)
             continue
 
         for isotope, rxn_map in extracted.items():

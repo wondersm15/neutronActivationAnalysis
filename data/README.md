@@ -36,10 +36,16 @@ in `data.py` to populate `REACTIONS[isotope][reaction]["cross_sections"]`.
 All values are in **barns** (1 b = 10⁻²⁴ cm²). `null` means the energy point
 is below the reaction threshold or outside the range of the pointwise file.
 
-**Coverage:**
+**Coverage (pointwise files from original pipeline run):**
 - `endf_3pt.json` — 48 isotopes, 77 reactions (ENDF/B-VIII.0)
 - `fendl_3pt.json` — 48 isotopes, 74 reactions (FENDL-3.2c; 3 Eu reactions
   absent because FENDL-3.2c does not cover rare earth trace impurity isotopes)
+
+Note: `REACTIONS` in `data.py` now covers 84 isotopes. The 36 newly added isotopes
+(H-1/H-2, B-10/B-11, C-12/C-13, Ca-40/42/43/44, K-39, Mg-24/25/26, Mo-94/95/96/97,
+Ni-61, O-18, P-31, Pb-204/206/207/208, S-32/33/34, Si-29, Ti-46/49, V-50, Zn-66-70)
+use hardcoded fallback cross sections until pointwise files are downloaded for them
+and `extract_pointwise_3pt.py` is re-run.
 
 **Regenerating:**
 ```bash
