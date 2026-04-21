@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neutron Activation Analysis</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.1/plotly.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    :root {
+      --bg:#0d1117; --surface:#161b22; --border:#30363d;
+      --accent:#58a6ff; --accent2:#f78166; --text:#e6edf3; --muted:#8b949e;
+      --green:#3fb950; --yellow:#d29922; --red:#f85149;
+    }
+    * { box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; font-size:.875rem; margin:0; }
+
+    /* Header */
+    header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; align-items:baseline; gap:16px; }
+    header h1 { font-size:1.1rem; font-weight:600; color:var(--accent); margin:0; letter-spacing:.02em; }
+    header .subtitle { font-size:.78rem; color:var(--muted); }
+    .data-badge { margin-left:auto; font-size:.72rem; color:var(--muted); background:var(--bg); border:1px solid var(--border); padding:2px 8px; border-radius:4px; }
+
+    /* Layout */
+    .main-layout { display:grid; grid-template-columns:290px 1fr; height:calc(100vh - 50px); overflow:hidden; }
+
+    /* Sidebar */
+    .sidebar { background:var(--surface); border-right:1px solid var(--border); padding:16px; overflow-y:auto; }
+    .sidebar h2 { font-size:.72rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:0 0 10px; }
+    .material-btn { display:block; width:100%; text-align:left; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text); padding:10px 12px; margin-bottom:6px; cursor:pointer; transition:background .15s,border-color .15s; }
+    .material-btn:hover { background:#21262d; border-color:var(--accent); }
+    .material-btn.active { background:#1f3149; border-color:var(--accent); color:var(--accent); }
+    .material-btn .mat-name { font-weight:600; font-size:.85rem; }
+
+    .sidebar-section { margin-top:18px; }
+    .sidebar-section h2 { margin-top:0; }
+    .form-check-label { color:var(--text); font-size:.82rem; }
+    .form-check-input:checked { background-color:var(--accent); border-color:var(--accent); }
+
+    /* Irradiation inputs */
+    .irrad-input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-size:.80rem; font-family:'Courier New',monospace; margin-top:3px; }
+    .irrad-label { font-size:.78rem; color:var(--muted); display:block; margin-top:8px; }
+    .compute-btn { width:100%; margin-top:12px; padding:7px; border:none; border-radius:6px; background:var(--accent); color:#0d1117; font-weight:600; font-size:.82rem; cursor:pointer; }
+    .compute-btn:hover { background:#79c0ff; }
+
+    /* Main panel */
+    .main-panel { display:flex; flex-direction:column; overflow:hidden; }
+    .panel-header { padding:14px 20px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .panel-header h2 { margin:0 0 2px; font-size:1rem; font-weight:600; }
+    .panel-header .desc { font-size:.78rem; color:var(--muted); }
+    .isotope-pills { margin-top:8px; display:flex; flex-wrap:wrap; gap:5px; }
+    .iso-pill { font-size:.72rem; padding:2px 8px; border-radius:12px; background:#21262d; border:1px solid var(--border); color:var(--muted); }
+    .iso-pill span { color:var(--text); font-weight:600; }
+
+    /* Tabs */
+    .tab-bar { display:flex; gap:0; border-bottom:1px solid var(--border); flex-shrink:0; padding:0 20px; overflow-x:auto; }
+    .tab-btn { background:transparent; border:none; border-bottom:2px solid transparent; color:var(--muted); padding:8px 14px; cursor:pointer; font-size:.80rem; transition:color .15s,border-color .15s; margin-bottom:-1px; white-space:nowrap; }
+    .tab-btn:hover { color:var(--text); }
+    .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+    /* Content */
+    .content-area { flex:1; overflow-y:auto; padding:16px 20px; }
+
+    /* Table styles */
+    .act-table { width:100%; border-collapse:collapse; font-size:.80rem; }
+    .act-table th { position:sticky; top:0; background:var(--bg); color:var(--muted); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; padding:6px 10px; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap; }
+    .act-table th:hover { color:var(--text); }
+    .act-table th .sort-arrow { margin-left:4px; opacity:.4; }
+    .act-table th.sorted .sort-arrow { opacity:1; color:var(--accent); }
+    .act-table td { padding:7px 10px; border-bottom:1px solid #1e242c; vertical-align:middle; }
+    .act-table tr:hover td { background:#1c2129; }
+    .product-tag { font-weight:700; color:var(--accent2); font-family:'Courier New',monospace; }
+    .reaction-tag { font-family:'Courier New',monospace; color:var(--muted); font-size:.78rem; }
+    .sigma-val { font-family:'Courier New',monospace; }
+    .sigma-na { color:var(--muted); font-size:.75rem; }
+    .sigma-pending { color:#8b6914; font-style:italic; cursor:help; }
+    .hl-short { color:var(--green); }
+    .hl-medium { color:var(--yellow); }
+    .hl-long { color:var(--red); }
+    .gamma-item { font-family:'Courier New',monospace; color:#79c0ff; }
+    .gamma-int { color:var(--muted); font-size:.70rem; }
+    .frac-bar-wrap { display:flex; align-items:center; gap:6px; }
+    .frac-bar { height:4px; border-radius:2px; background:var(--accent); opacity:.6; min-width:2px; }
+    .frac-val { font-size:.75rem; color:var(--muted); white-space:nowrap; }
+    .notes-cell { color:var(--muted); font-size:.75rem; min-width:320px; max-width:480px; white-space:normal; word-break:break-word; }
+    .rxn-check { width:14px; height:14px; cursor:pointer; accent-color:var(--accent); vertical-align:middle; }
+    .row-disabled td { opacity:.35; }
+    .mat-group { margin-bottom:4px; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+    .mat-group-hdr { display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:#1c2129; cursor:pointer; user-select:none; font-size:.72rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
+    .mat-group-hdr:hover { background:#21262d; color:var(--text); }
+    .mat-group-hdr .group-arrow { font-size:.65rem; transition:transform .2s; }
+    .mat-group-hdr.open .group-arrow { transform:rotate(90deg); }
+    .mat-group-body { display:none; padding:6px; }
+    .mat-group-body.open { display:block; }
+
+    /* Waste classification badges */
+    .waste-badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:.68rem; font-weight:700; letter-spacing:.04em; white-space:nowrap; cursor:default; }
+    .delta-badge { display:inline-block; font-family:'Courier New',monospace; font-size:.75rem; padding:1px 5px; border-radius:3px; white-space:nowrap; }
+    .delta-ok     { color:#8b949e; }
+    .delta-warn   { color:#e3b341; }
+    .delta-high   { color:#f97575; }
+    .delta-huge   { color:#f97575; font-weight:700; }
+    th.col-delta, td.col-delta { display:none; }
+    th.col-delta.visible, td.col-delta.visible { display:table-cell; }
+    .waste-badge.nrc-c    { background:#5a1a1a; color:#f97575; border:1px solid #7a2525; }
+    .waste-badge.nrc-a    { background:#3d2800; color:#e39a2a; border:1px solid #5a3c00; }
+    .waste-badge.iaea-cl  { background:#1a1a50; color:#7b9ef5; border:1px solid #2a2a70; }
+    .waste-badge.alpha    { background:#2d0d3a; color:#d07ee8; border:1px solid #4a1a5a; }
+
+    /* Impurity panel */
+    .impurity-panel { margin-top:20px; }
+    .impurity-panel-title { font-size:.75rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; }
+    .impurity-grid { display:flex; flex-wrap:wrap; gap:10px; }
+    .impurity-card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 14px; min-width:220px; max-width:340px; flex:1; }
+    .impurity-card.sig-critical { border-left:3px solid #f97575; }
+    .impurity-card.sig-high     { border-left:3px solid #e39a2a; }
+    .impurity-card.sig-moderate { border-left:3px solid #d0c050; }
+    .impurity-card.sig-low      { border-left:3px solid #4a5568; }
+    .impurity-card .imp-header  { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .impurity-card .imp-elem    { font-weight:700; font-size:.88rem; color:var(--text); }
+    .impurity-card .imp-ppm     { font-size:.72rem; color:var(--muted); }
+    .sig-tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:.65rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+    .sig-tag.critical { background:#5a1a1a; color:#f97575; }
+    .sig-tag.high     { background:#3d2800; color:#e39a2a; }
+    .sig-tag.moderate { background:#2d2d00; color:#d0c050; }
+    .sig-tag.low      { background:#1a2230; color:#7b8fa8; }
+    .impurity-card .imp-note    { font-size:.74rem; color:#8b949e; line-height:1.45; margin-top:4px; }
+
+    /* Charts */
+    .chart-title { font-size:.80rem; font-weight:600; color:var(--muted); margin-bottom:10px; }
+    .gamma-filter-row { display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap; }
+    .gamma-filter-row label { font-size:.78rem; color:var(--muted); }
+    #gamma-min-int { width:80px; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:3px 8px; border-radius:4px; font-size:.78rem; }
+    /* Gamma normalization toggle */
+    .gamma-norm-row { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+    .gamma-norm-btn { font-size:.75rem; padding:3px 12px; border-radius:4px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; transition:background .15s,color .15s,border-color .15s; }
+    .gamma-norm-btn.active { background:#0d2b14; color:#3fb950; border-color:#196127; }
+    .gamma-norm-label { font-size:.72rem; color:var(--muted); margin-right:4px; }
+    /* Cooling time panel (fluence mode only) */
+    .gamma-cool-panel { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 14px; margin-bottom:10px; }
+    .gamma-cool-panel .cool-header { font-size:.72rem; color:var(--muted); margin-bottom:6px; }
+    .gamma-cool-panel .cool-readout { font-family:'Courier New',monospace; font-size:.80rem; color:var(--text); margin-top:6px; }
+    #gamma-cool-slider { margin:6px 4px 4px; }
+    .gamma-cool-panel .cool-range-row { display:flex; justify-content:space-between; font-size:.68rem; color:var(--muted); margin-top:4px; }
+
+    /* Plotly dark overrides */
+    .plotly-container { margin-bottom:16px; }
+
+    /* Snapshot table */
+    .snapshot-table { width:100%; border-collapse:collapse; font-size:.78rem; margin-top:16px; }
+    .snapshot-table th { background:var(--surface); color:var(--muted); font-size:.70rem; text-transform:uppercase; letter-spacing:.06em; padding:6px 10px; border-bottom:1px solid var(--border); text-align:right; }
+    .snapshot-table th:first-child { text-align:left; }
+    .snapshot-table td { padding:5px 10px; border-bottom:1px solid #1e242c; text-align:right; font-family:'Courier New',monospace; }
+    .snapshot-table td:first-child { text-align:left; color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; }
+    .snapshot-table .dominant { color:var(--accent2); font-weight:600; }
+
+    /* Comparison material selector */
+    .comp-mat-grid { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .comp-mat-check { display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 12px; cursor:pointer; }
+    .comp-mat-check:has(input:checked) { border-color:var(--accent); background:#1f3149; }
+    .comp-mat-check input { accent-color:var(--accent); }
+    .comp-mat-check label { font-size:.82rem; cursor:pointer; }
+    .comp-section-hdr { font-size:.70rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:0 0 8px; }
+    .comp-energy-check { display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 12px; cursor:pointer; }
+    .comp-energy-check:has(input:checked) { border-color:#f78166; background:#2d1b16; }
+    .comp-energy-check input { accent-color:#f78166; }
+    .comp-energy-check label { font-size:.82rem; cursor:pointer; }
+    .comp-energy-check .energy-detail { font-size:.68rem; color:var(--muted); font-family:'Courier New',monospace; margin-left:2px; }
+
+    /* Misc */
+    .spinner { display:flex; align-items:center; gap:10px; color:var(--muted); padding:40px 0; }
+    .spinner-border { width:1.2rem; height:1.2rem; border-width:2px; }
+    .empty-state { text-align:center; color:var(--muted); padding:60px 20px; }
+    .empty-state .big-icon { font-size:2.5rem; margin-bottom:10px; }
+    .ref-note { font-size:.72rem; color:var(--muted); margin-top:6px; }
+    .info-box { font-size:.78rem; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 14px; margin-bottom:16px; }
+
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+    @media (max-width:768px) { .main-layout { grid-template-columns:1fr; } .sidebar { border-right:none; border-bottom:1px solid var(--border); max-height:260px; } }
+
+    /* noUiSlider dark theme overrides */
+    #hl-slider { margin:10px 4px 4px; }
+    .noUi-target { background:#21262d; border:1px solid var(--border); box-shadow:none; border-radius:3px; }
+    .noUi-connect { background:var(--accent); }
+    .noUi-handle { background:var(--surface); border:2px solid var(--accent); border-radius:50%; box-shadow:none; width:14px !important; height:14px !important; top:-6px !important; right:-7px !important; cursor:grab; }
+    .noUi-handle:active { cursor:grabbing; }
+    .noUi-handle::before, .noUi-handle::after { display:none; }
+    .noUi-pips { color:var(--muted); font-size:.62rem; }
+    .noUi-pip { color:var(--muted); }
+    .noUi-marker { background:var(--border); }
+    .noUi-value { color:var(--muted); font-size:.62rem; margin-top:2px; }
+    .hl-range-display { display:flex; justify-content:space-between; font-size:.73rem; color:var(--text); margin-top:8px; font-family:'Courier New',monospace; }
+    .hl-range-display span { background:var(--bg); border:1px solid var(--border); border-radius:3px; padding:1px 5px; }
+
+    /* Cross Sections tab */
+    .xsec-topbar { display:flex; align-items:center; gap:8px; padding:10px 20px; border-bottom:1px solid var(--border); flex-wrap:wrap; flex-shrink:0; }
+    .xsec-selector-label { font-size:.72rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-right:4px; }
+    .xsec-lib-btn { background:transparent; border:1px solid var(--border); border-radius:5px; color:var(--muted); padding:3px 11px; cursor:pointer; font-size:.78rem; transition:background .12s,border-color .12s,color .12s; }
+    .xsec-lib-btn:hover { color:var(--text); border-color:var(--muted); }
+    .xsec-lib-btn.active { background:#1f3149; border-color:var(--accent); color:var(--accent); font-weight:600; }
+    .xsec-trace-count { font-size:.74rem; color:var(--muted); margin-left:8px; }
+    .xsec-body { display:flex; min-height:0; }
+    .xsec-panel { width:185px; min-width:185px; overflow-y:auto; border-right:1px solid var(--border); padding:10px 10px; background:var(--surface); max-height:calc(100vh - 200px); }
+    .xsec-panel-empty { font-size:.78rem; color:var(--muted); padding:10px 4px; }
+    .xsec-group { margin-bottom:10px; }
+    .xsec-iso-hdr { display:flex; align-items:center; gap:5px; font-size:.76rem; font-weight:600; color:var(--accent); padding:2px 0; cursor:pointer; user-select:none; }
+    .xsec-iso-hdr input { cursor:pointer; flex-shrink:0; }
+    .xsec-rxn-item { display:flex; align-items:center; flex-wrap:wrap; gap:3px; margin:2px 0 2px 14px; font-size:.74rem; color:var(--text); cursor:pointer; user-select:none; }
+    .xsec-rxn-item input { cursor:pointer; flex-shrink:0; }
+    .xsec-color-dot { display:inline-block; width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-left:2px; }
+    .xsec-rxn-total { color:var(--muted); font-style:italic; }
+    .xsec-main { flex:1; overflow-y:auto; padding:16px 20px; min-width:0; }
+    .xsec-download-note { padding:8px 12px; background:#161b22; border:1px solid var(--yellow); border-radius:6px; font-size:.78rem; color:var(--yellow); margin-bottom:10px; }
+    .xsec-download-note code { color:var(--text); background:#0d1117; padding:1px 5px; border-radius:3px; }
+    /* Stable / activation product badges in checklist */
+    .xsec-product-badge { font-size:.66rem; font-family:'Courier New',monospace; padding:1px 5px; border-radius:3px; margin-left:4px; white-space:nowrap; flex-shrink:0; }
+    .xsec-product-badge.stable  { color:#6e7681; background:#21262d; border:1px solid #30363d; }
+    .xsec-product-badge.active-product { color:#3fb950; background:#0d2b14; border:1px solid #196127; }
+
+    /* Literature tab */
+    .lit-file-selector { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+    .lit-file-btn { background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--muted); padding:5px 12px; cursor:pointer; font-size:.80rem; transition:background .15s,border-color .15s,color .15s; }
+    .lit-file-btn:hover { border-color:var(--accent); color:var(--text); }
+    .lit-file-btn.active { background:#1f3149; border-color:var(--accent); color:var(--accent); }
+    .lit-content { max-width:860px; line-height:1.65; }
+    .lit-content h1 { font-size:1.15rem; font-weight:700; color:var(--text); margin:0 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+    .lit-content h2 { font-size:.95rem; font-weight:600; color:var(--accent); margin:22px 0 8px; }
+    .lit-content h3 { font-size:.85rem; font-weight:600; color:var(--text); margin:16px 0 6px; }
+    .lit-content p  { color:var(--muted); margin:0 0 10px; font-size:.82rem; }
+    .lit-content ul, .lit-content ol { color:var(--muted); font-size:.82rem; margin:0 0 10px; padding-left:22px; }
+    .lit-content li { margin-bottom:4px; }
+    .lit-content code { font-family:'Courier New',monospace; background:#21262d; border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-size:.80rem; color:#79c0ff; }
+    .lit-content pre { background:#21262d; border:1px solid var(--border); border-radius:6px; padding:12px 16px; overflow-x:auto; margin:0 0 12px; }
+    .lit-content pre code { background:none; border:none; padding:0; }
+    .lit-content table { border-collapse:collapse; width:100%; margin:0 0 14px; font-size:.78rem; }
+    .lit-content th { background:var(--surface); color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; padding:6px 10px; border:1px solid var(--border); text-align:left; }
+    .lit-content td { padding:5px 10px; border:1px solid var(--border); color:var(--muted); vertical-align:top; }
+    .lit-content td:first-child { color:var(--text); font-weight:500; }
+    .lit-content blockquote { border-left:3px solid var(--accent); margin:0 0 12px; padding:6px 14px; background:#1f3149; border-radius:0 4px 4px 0; }
+    .lit-content blockquote p { color:var(--text); }
+    .lit-content hr { border:none; border-top:1px solid var(--border); margin:18px 0; }
+    .lit-content strong { color:var(--text); }
+    .lit-content a { color:var(--accent); }
+    .refs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:12px; margin-top:12px; }
+    .ref-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+    .ref-card .ref-tag { display:inline-block; font-size:.68rem; padding:1px 6px; border-radius:3px; border:1px solid var(--border); color:var(--muted); margin-bottom:6px; font-family:'Courier New',monospace; text-transform:uppercase; }
+    .ref-card .ref-title { font-size:.82rem; font-weight:600; color:var(--text); margin-bottom:4px; }
+    .ref-card .ref-authors { font-size:.75rem; color:var(--muted); margin-bottom:4px; }
+    .ref-card .ref-meta { font-size:.72rem; color:var(--muted); font-style:italic; margin-bottom:6px; }
+    .ref-card .ref-notes { font-size:.75rem; color:var(--muted); border-top:1px solid var(--border); padding-top:6px; margin-top:6px; }
+    .ref-card a { color:var(--accent); font-size:.72rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#9883; Neutron Activation Analysis</h1>
+  <span class="subtitle">Pulsed-power structural materials</span>
+  <span class="data-badge" id="data-source-badge">Loading&hellip;</span>
+</header>
+
+<div class="main-layout">
+
+  <!-- ====== SIDEBAR ====== -->
+  <aside class="sidebar">
+    <h2>Materials</h2>
+    <div id="material-list"><div class="spinner"><div class="spinner-border" role="status"></div> Loading&hellip;</div></div>
+
+    <div class="sidebar-section">
+      <h2>Irradiation (single pulse)</h2>
+      <label class="irrad-label">Thermal fluence (n/cm&sup2;)
+        <input class="irrad-input" id="inp-fluence-th" type="text" value="0" /></label>
+      <label class="irrad-label" title="D-D neutron peak / fission spectrum representative (2.5 MeV)">2.5 MeV fluence (n/cm&sup2;)
+        <input class="irrad-input" id="inp-fluence-2p5" type="text" value="0" /></label>
+      <label class="irrad-label">14.1 MeV fluence (n/cm&sup2;)
+        <input class="irrad-input" id="inp-fluence-14" type="text" value="1e14" /></label>
+      <label class="irrad-label">Distance for dose rate (cm)
+        <input class="irrad-input" id="inp-distance" type="text" value="100" /></label>
+      <label class="irrad-label" title="Nuclear data library for cross-section values">Nuclear data library
+        <select class="irrad-input" id="inp-library">
+          <option value="endf8" selected>ENDF/B-VIII.0</option>
+          <option value="fendl32c">FENDL-3.2c</option>
+          <option value="jendl5" disabled>JENDL-5 (coming)</option>
+          <option value="tendl23" disabled>TENDL-2023 (coming)</option>
+          <option value="eaf10" disabled>EAF-2010 (coming)</option>
+        </select></label>
+      <button class="compute-btn" id="btn-compute" onclick="computeForCurrent()">Compute Activity &amp; Dose</button>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Table filters</h2>
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="filter-thermal" checked>
+        <label class="form-check-label" for="filter-thermal">Thermal (&sigma; at 0.0253 eV)</label>
+      </div>
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="filter-2p5mev" checked>
+        <label class="form-check-label" for="filter-2p5mev">2.45 MeV (D-D fusion)</label>
+      </div>
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="filter-14mev" checked>
+        <label class="form-check-label" for="filter-14mev">14.1 MeV (D-T fusion)</label>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px;">Half-life range</div>
+        <div id="hl-slider"></div>
+        <div class="hl-range-display">
+          <span id="hl-min-label">1 s</span>
+          <span id="hl-max-label">∞</span>
+        </div>
+      </div>
+      <label class="irrad-label" style="margin-top:10px;" title="Hide reactions where &sigma;&times;f is below this threshold in both flux regimes. 0 = show all.">Min &sigma;&middot;f threshold (b)
+        <input class="irrad-input" id="inp-sigma-f-min" type="text" value="0" placeholder="0 = show all" /></label>
+    </div>
+  </aside>
+
+  <!-- ====== MAIN PANEL ====== -->
+  <main class="main-panel">
+    <div class="panel-header" id="panel-header" style="display:none;">
+      <h2 id="mat-title">&mdash;</h2>
+      <div class="desc" id="mat-desc">&mdash;</div>
+      <div class="isotope-pills" id="iso-pills"></div>
+    </div>
+
+    <div class="tab-bar" id="tab-bar">
+      <button class="tab-btn active" data-tab="activation">Activation Products</button>
+      <button class="tab-btn" data-tab="activity">Activity &amp; Dose Rate</button>
+      <button class="tab-btn" data-tab="gamma">Gamma Spectrum</button>
+      <button class="tab-btn" data-tab="comparison">Comparison</button>
+      <button class="tab-btn" data-tab="composition">Isotopic Composition</button>
+      <button class="tab-btn" data-tab="xsec">Cross Sections</button>
+      <button class="tab-btn" data-tab="literature" style="margin-left:auto;border-left:1px solid var(--border);padding-left:16px;">Literature</button>
+    </div>
+
+    <div class="content-area">
+      <div class="empty-state" id="empty-state">
+        <div class="big-icon">&#128300;</div>
+        <div>Select a material to view activation data</div>
+      </div>
+      <div class="spinner" id="loading-indicator" style="display:none;">
+        <div class="spinner-border" role="status"></div> Loading&hellip;
+      </div>
+
+      <!-- ---- Tab: Activation table ---- -->
+      <div id="tab-activation" style="display:none;">
+        <div style="overflow-x:auto;">
+          <table class="act-table" id="act-table">
+            <thead><tr>
+              <th style="width:28px;" title="Enable/disable this reaction from activity/dose computation"><input type="checkbox" id="toggle-all-rxn" checked class="rxn-check" title="Toggle all reactions"></th>
+              <th data-col="target">Target <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="atom_frac">Nuclide frac <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="reaction">Reaction <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="product">Product <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="sigma_th">&sigma;_th (b) <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="sigma_2p5" title="2.45 MeV cross-section (D-D neutron peak). Log-log interpolated from ENDF/B-VIII.0 or FENDL-3.2c pointwise data. Null for reactions with thresholds above 2.45 MeV.">&sigma;_2.45MeV (b) <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="sigma_14">&sigma;_14MeV (b) <span class="sort-arrow">&updownarrow;</span></th>
+              <th class="col-delta" title="Signed percentage difference between FENDL-3.2c and ENDF/B-VIII.0 at 14.1 MeV: (FENDL−ENDF)/ENDF × 100%">ENDF/FENDL Δ%</th>
+              <th data-col="sigma_f" title="Spectrum-weighted production proxy: &sigma; &times; atom fraction. Reflects relative number of activations produced per unit fluence. Updates with flux regime filter.">&sigma;&middot;f (b) <span class="sort-arrow">↓</span></th>
+              <th data-col="threshold">E_th (MeV) <span class="sort-arrow">&updownarrow;</span></th>
+              <th data-col="t_half_s">Half-life <span class="sort-arrow">&updownarrow;</span></th>
+              <th>Decay</th>
+              <th>Gamma lines (keV, %)</th>
+              <th title="NRC 10 CFR 61 or IAEA RS-G-1.7 waste classification limit for this product">Waste class</th>
+              <th>Notes</th>
+            </tr></thead>
+            <tbody id="act-tbody"></tbody>
+          </table>
+        </div>
+        <div class="ref-note" id="table-source-note"></div>
+      </div>
+
+      <!-- ---- Tab: Activity & Dose Rate ---- -->
+      <div id="tab-activity" style="display:none;">
+        <div class="info-box" id="activity-info">
+          Click <strong>Compute Activity &amp; Dose</strong> in the sidebar to generate time-dependent curves for the selected material.
+        </div>
+        <div id="activity-plots"></div>
+        <div id="snapshot-section" style="display:none;">
+          <div class="chart-title" style="margin-top:20px;">Cooling-time snapshot</div>
+          <div style="overflow-x:auto;">
+            <table class="snapshot-table" id="snapshot-table">
+              <thead id="snapshot-thead"></thead>
+              <tbody id="snapshot-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- Tab: Gamma spectrum ---- -->
+      <div id="tab-gamma" style="display:none;">
+        <!-- Normalization mode toggle -->
+        <div class="gamma-norm-row">
+          <span class="gamma-norm-label">Normalization:</span>
+          <button id="gamma-norm-decay"   class="gamma-norm-btn active" title="Intensity per decay of each individual product isotope — independent of production rate">Per-isotope-decay</button>
+          <button id="gamma-norm-fluence" class="gamma-norm-btn"        title="Emission rate weighted by actual nuclide production from the specified irradiation">Per-irradiation-fluence</button>
+        </div>
+
+        <!-- Cooling time panel (shown only in fluence mode) -->
+        <div class="gamma-cool-panel" id="gamma-cool-panel" style="display:none;">
+          <div class="cool-header">Cooling time after end of irradiation</div>
+          <div id="gamma-cool-slider"></div>
+          <div class="cool-range-row">
+            <span>1 s</span><span>1 min</span><span>1 h</span><span>1 d</span><span>30 d</span><span>1 y</span><span>317 y</span>
+          </div>
+          <div class="cool-readout">t = <span id="gamma-cool-readout">—</span></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="gamma-filter-row">
+          <label id="gamma-min-int-label">Min. intensity (%): <input type="number" id="gamma-min-int" value="1" min="0" max="100" step="0.5" /></label>
+          <label style="display:flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="gamma-show-511" checked> Show 511 keV annihilation
+          </label>
+        </div>
+        <div class="chart-title" id="gamma-chart-title">Gamma lines &mdash; energy (keV) vs. intensity (photons / 100 decays)</div>
+        <div id="gamma-chart-container" style="position:relative;height:340px;">
+          <canvas id="gamma-chart"></canvas>
+        </div>
+        <div class="ref-note" id="gamma-ref-note">Each line corresponds to a unique activation product. Intensities are absolute (photons per 100 decays of that product), not weighted by production rate.</div>
+      </div>
+
+      <!-- ---- Tab: Comparison ---- -->
+      <div id="tab-comparison" style="display:none;">
+        <div class="info-box">Select materials and energy bins to compare. The same fluence is applied to each selected bin.</div>
+
+        <div class="comp-section-hdr" style="margin-bottom:8px;">Materials</div>
+        <div class="comp-mat-grid" id="comp-mat-grid"></div>
+
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:16px;">
+          <div>
+            <div class="comp-section-hdr" style="margin-bottom:6px;">Energy Bin</div>
+            <div class="comp-mat-grid" id="comp-energy-grid" style="margin-bottom:0;"></div>
+          </div>
+          <div>
+            <div class="comp-section-hdr" style="margin-bottom:6px;">Fluence (n/cm²)</div>
+            <input class="irrad-input" id="comp-fluence" type="text" value="1e14" style="width:130px;" />
+          </div>
+        </div>
+
+        <button class="compute-btn" style="width:auto;padding:7px 20px;margin-bottom:20px;" onclick="computeComparison()">Compute Comparison</button>
+        <div id="comp-plots"></div>
+        <div id="comp-snapshot-section" style="display:none;">
+          <div class="chart-title" style="margin-top:20px;">Comparative cooling-time snapshot</div>
+          <div style="overflow-x:auto;" id="comp-snapshot-wrap"></div>
+        </div>
+      </div>
+
+      <!-- ---- Tab: Isotopic composition ---- -->
+      <div id="tab-composition" style="display:none;">
+        <div class="chart-title">Isotopic atom fractions in material</div>
+        <div id="iso-chart-container" style="position:relative;height:280px;">
+          <canvas id="iso-chart"></canvas>
+        </div>
+        <div id="iso-table-wrap" style="margin-top:20px;"></div>
+        <div id="impurity-panel"></div>
+      </div>
+
+      <!-- ---- Tab: Cross Sections σ(E) ---- -->
+      <div id="tab-xsec" style="display:none;flex-direction:column;">
+
+        <!-- Top bar: library selector -->
+        <div class="xsec-topbar" id="xsec-topbar">
+          <span class="xsec-selector-label">Library</span>
+          <button class="xsec-lib-btn active" data-lib="endf8">ENDF/B-VIII.0</button>
+          <button class="xsec-lib-btn" data-lib="fendl32c">FENDL-3.2c</button>
+          <button class="xsec-lib-btn" data-lib="both">Both overlaid</button>
+          <span class="xsec-trace-count" id="xsec-trace-count"></span>
+        </div>
+
+        <!-- Two-column body -->
+        <div class="xsec-body">
+
+          <!-- Left: checklist panel -->
+          <div class="xsec-panel" id="xsec-panel">
+            <div id="xsec-checklist-inner">
+              <div class="xsec-panel-empty">Select a material to see isotopes.</div>
+            </div>
+          </div>
+
+          <!-- Right: plot + tables -->
+          <div class="xsec-main" id="xsec-main">
+            <div class="info-box" id="xsec-empty-msg">Select a material to view cross sections.</div>
+            <div class="xsec-download-note" id="xsec-no-data-msg" style="display:none;"></div>
+            <div id="xsec-plot" style="display:none;"></div>
+            <div id="xsec-ref-table" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- Tab: Literature Review ---- -->
+      <div id="tab-literature" style="display:none;">
+        <div class="info-box" id="lit-loading">Loading literature&hellip;</div>
+        <div id="lit-main" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="lit-file-selector" id="lit-file-selector"></div>
+            <button class="lit-file-btn" id="lit-refs-btn" onclick="showLitRefs()" style="flex-shrink:0;">References</button>
+          </div>
+          <div class="lit-content" id="lit-content"></div>
+          <div id="lit-refs-section" style="display:none;">
+            <div style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:10px;">Project References</div>
+            <div class="refs-grid" id="refs-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// =============================================================
+// STATE
+// =============================================================
+let currentMaterial    = null;
+let currentData        = null;      // material info (activation table)
+let currentCompute     = null;      // activity/dose computation result
+let currentTab         = 'activation';
+let sortCol            = 'sigma_f';
+let sortDir            = -1;
+let gammaChartInst     = null;
+let isoChartInst       = null;
+let disabledReactions  = new Set(); // keys: "target|reaction|product"
+let allMatsData        = null;      // cached categorized materials list
+let literatureData     = null;      // cached literature docs + refs
+let currentLitDoc      = null;      // filename of currently displayed lit doc
+let xsecActiveTraces   = new Set(); // keys: "isotope||reaction"
+let xsecLibraryMode    = "endf8";   // "endf8" | "fendl32c" | "both"
+let xsecLastMaterial   = null;      // detect material changes to reset state
+let xsecColorAssign    = {};        // "isotope||reaction" → PALETTE index (stable)
+
+// Gamma normalization state
+let gammaNormMode      = 'decay';   // 'decay' | 'fluence'
+let gammaCoolLogT      = 3.56;      // log10(seconds), default 1 h
+let gammaComputeCache  = null;      // { material, params_key, result } — invalidated on material/fluence change
+let gammaCoolSliderInst = null;
+
+// Half-life slider state (log10 seconds)
+const HL_LOG_MIN = 0;    // 1 s
+const HL_LOG_MAX = 10;   // ~317 y  (10^10 s)
+let hlLogLow  = HL_LOG_MIN;
+let hlLogHigh = HL_LOG_MAX;
+
+function fmtHL(log10s) {
+  const s = Math.pow(10, log10s);
+  if (s < 60)        return `${s.toFixed(0)} s`;
+  if (s < 3600)      return `${(s/60).toFixed(1)} min`;
+  if (s < 86400)     return `${(s/3600).toFixed(1)} h`;
+  if (s < 2592000)   return `${(s/86400).toFixed(1)} d`;
+  if (s < 3.156e8)   return `${(s/3.156e7).toFixed(1)} y`;
+  return               `${(s/3.156e9).toFixed(0)} ky`;
+}
+const PALETTE = ['#58a6ff','#f78166','#3fb950','#d29922','#bc8cff','#79c0ff','#ffa657','#56d364','#ff7b72','#d2a8ff','#4dabf7','#e67e22'];
+const PLOTLY_LAYOUT_BASE = {
+  paper_bgcolor: '#0d1117',
+  plot_bgcolor:  '#0d1117',
+  font:          { color:'#8b949e', size:11 },
+  margin:        { l:70, r:30, t:35, b:50 },
+  legend:        { font:{size:10}, bgcolor:'rgba(0,0,0,0)' },
+  hovermode:     'x unified',
+};
+const SNAPSHOT_LABELS = ['1 min','10 min','1 h','8 h','1 d','7 d','30 d','1 y'];
+const SNAPSHOT_SECS   = [60, 600, 3600, 28800, 86400, 604800, 2592000, 31557600];
+
+// Energy bins for the Comparison tab.
+// The shared fluence value is read from #comp-fluence at compute time.
+const ENERGY_PRESETS = [
+  { id:'thermal', label:'Thermal',     field:'fluence_th'  },
+  { id:'dd',      label:'DD (2.45 MeV)', field:'fluence_2p5' },
+  { id:'dt',      label:'DT (14.1 MeV)', field:'fluence_14'  },
+];
+
+// =============================================================
+// INIT
+// =============================================================
+async function init() {
+  const res  = await fetch('/api/materials');
+  allMatsData = await res.json();
+  renderMaterialList(allMatsData);
+  renderComparisonChecklist(allMatsData);
+  initHalfLifeSlider();
+}
+
+function initHalfLifeSlider() {
+  const slider = document.getElementById('hl-slider');
+
+  // Pip positions at key half-lives (log10 s)
+  const pipValues = {
+    0:    '1 s',
+    1.78: '1 m',   // log10(60)
+    3.56: '1 h',   // log10(3600)
+    4.94: '1 d',   // log10(86400)
+    6.76: '30 d',  // log10(2592000)
+    7.50: '1 y',   // log10(3.156e7)
+    10:   '317 y',
+  };
+
+  noUiSlider.create(slider, {
+    start:    [HL_LOG_MIN, HL_LOG_MAX],
+    connect:  true,
+    range:    { min: HL_LOG_MIN, max: HL_LOG_MAX },
+    step:     0.05,
+    pips: {
+      mode:    'positions',
+      values:  [0, 17, 35, 49, 68, 75, 100],
+      density: 4,
+      format:  {
+        to: v => {
+          // v is the raw log10 value at each pip position
+          const s = Math.pow(10, v);
+          if (s < 55)      return '1 s';
+          if (s < 200)     return '1 m';
+          if (s < 4000)    return '1 h';
+          if (s < 1e5)     return '1 d';
+          if (s < 3e6)     return '30 d';
+          if (s < 4e7)     return '1 y';
+          return           '317 y';
+        },
+        from: v => v,
+      },
+    },
+  });
+
+  slider.noUiSlider.on('update', (values) => {
+    hlLogLow  = parseFloat(values[0]);
+    hlLogHigh = parseFloat(values[1]);
+    const loLabel = hlLogLow  <= HL_LOG_MIN + 0.1 ? '0 s' : fmtHL(hlLogLow);
+    const hiLabel = hlLogHigh >= HL_LOG_MAX - 0.1 ? '∞'  : fmtHL(hlLogHigh);
+    document.getElementById('hl-min-label').textContent = loLabel;
+    document.getElementById('hl-max-label').textContent = hiLabel;
+  });
+
+  slider.noUiSlider.on('change', () => {
+    if (currentTab === 'activation') { renderActivationTable(); updateDeltaColumnVisibility(); }
+    if (currentTab === 'gamma')      renderGammaChart();
+    if (currentTab === 'activity')   renderActivityTab();
+  });
+}
+
+// =============================================================
+// GAMMA COOLING TIME SLIDER
+// =============================================================
+function initGammaCoolSlider() {
+  const el = document.getElementById('gamma-cool-slider');
+  if (!el || gammaCoolSliderInst) return;
+  noUiSlider.create(el, {
+    start:  [gammaCoolLogT],
+    connect: [true, false],
+    range:  { min: 0, max: HL_LOG_MAX },
+    step:   0.05,
+  });
+  gammaCoolSliderInst = el.noUiSlider;
+  el.noUiSlider.on('update', values => {
+    gammaCoolLogT = parseFloat(values[0]);
+    document.getElementById('gamma-cool-readout').textContent = fmtHL(gammaCoolLogT);
+  });
+  el.noUiSlider.on('change', () => {
+    if (currentTab === 'gamma') renderGammaChart();
+  });
+  // Set initial readout
+  document.getElementById('gamma-cool-readout').textContent = fmtHL(gammaCoolLogT);
+}
+
+// Build a { product → activity_Bq_per_g at t } map from cached compute result.
+// t is in seconds. Returns null if compute hasn't been run or failed.
+async function getGammaWeights() {
+  if (!currentMaterial) return null;
+
+  const p = getIrradParams();
+  const paramsKey = `${currentMaterial}|${p.fluence_th}|${p.fluence_2p5}|${p.fluence_14}|${p.library}`;
+
+  // Re-use cached result if material + fluence params unchanged
+  if (gammaComputeCache && gammaComputeCache.key === paramsKey) {
+    return _interpolateWeights(gammaComputeCache.result);
+  }
+
+  // Fetch from compute endpoint
+  try {
+    const resp = await fetch('/api/compute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        materials:   [currentMaterial],
+        fluence_th:  p.fluence_th,
+        fluence_2p5: p.fluence_2p5,
+        fluence_14:  p.fluence_14,
+        library:     p.library,
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const result = data.results?.[currentMaterial];
+    if (!result) return null;
+    gammaComputeCache = { key: paramsKey, result };
+    return _interpolateWeights(result);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Given a compute result, interpolate activity_Bq_per_g at gammaCoolLogT
+// for each product. Returns { product → activity } map.
+function _interpolateWeights(result) {
+  const t_query = Math.pow(10, gammaCoolLogT);
+  const time_s  = result.time_s;
+  const weights = {};
+
+  result.products.forEach(p => {
+    const act = p.activity_Bq_per_g;
+    // Find bracketing index
+    if (t_query <= time_s[0]) {
+      weights[p.product] = act[0];
+      return;
+    }
+    if (t_query >= time_s[time_s.length - 1]) {
+      weights[p.product] = act[act.length - 1];
+      return;
+    }
+    let lo = 0, hi = time_s.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (time_s[mid] <= t_query) lo = mid; else hi = mid;
+    }
+    // Log-linear interpolation in time
+    const t0 = time_s[lo], t1 = time_s[hi];
+    const a0 = act[lo],    a1 = act[hi];
+    const frac = (t_query - t0) / (t1 - t0);
+    weights[p.product] = Math.max(0, a0 + frac * (a1 - a0));
+  });
+
+  return weights;
+}
+
+// =============================================================
+// MATERIAL LIST — dynamic categories
+// =============================================================
+function renderMaterialList(cats) {
+  const el = document.getElementById('material-list');
+  el.innerHTML = '';
+
+  // Display order and labels for known categories; unknown keys fall through to "Other"
+  const CATEGORY_ORDER = [
+    { key: 'steel',     label: 'Steels',             open: true  },
+    { key: 'metal',     label: 'Metals & Alloys',    open: true  },
+    { key: 'alloy',     label: 'Alloys',             open: true  },  // legacy fallback
+    { key: 'concrete',  label: 'Concrete',           open: false },
+    { key: 'shielding', label: 'Shielding',          open: false },
+    { key: 'moderator', label: 'Moderator',          open: false },
+    { key: 'element',   label: 'Reference Elements', open: false },
+    { key: 'other',     label: 'Other',              open: false },
+  ];
+
+  function addGroup(label, names, defaultOpen) {
+    if (!names || names.length === 0) return;
+
+    const group = document.createElement('div');
+    group.className = 'mat-group';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'mat-group-hdr' + (defaultOpen ? ' open' : '');
+    hdr.innerHTML = `<span>${label} <span style="color:var(--border);font-weight:400">(${names.length})</span></span><span class="group-arrow">&#9656;</span>`;
+
+    const body = document.createElement('div');
+    body.className = 'mat-group-body' + (defaultOpen ? ' open' : '');
+
+    hdr.addEventListener('click', () => {
+      hdr.classList.toggle('open');
+      body.classList.toggle('open');
+    });
+
+    names.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'material-btn';
+      btn.dataset.matName = name;
+      btn.innerHTML = `<div class="mat-name">${name}</div>`;
+      btn.onclick = () => selectMaterial(name, btn);
+      body.appendChild(btn);
+    });
+
+    group.appendChild(hdr);
+    group.appendChild(body);
+    el.appendChild(group);
+  }
+
+  // Render in defined order, then any remaining keys not in CATEGORY_ORDER
+  const rendered = new Set();
+  CATEGORY_ORDER.forEach(({ key, label, open }) => {
+    if (cats[key] && cats[key].length) {
+      addGroup(label, cats[key], open);
+      rendered.add(key);
+    }
+  });
+  // Catch any unexpected categories not in the order list
+  Object.keys(cats).forEach(key => {
+    if (!rendered.has(key) && cats[key].length) {
+      addGroup(key.charAt(0).toUpperCase() + key.slice(1), cats[key], false);
+    }
+  });
+}
+
+async function selectMaterial(name, btn) {
+  document.querySelectorAll('.material-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('empty-state').style.display      = 'none';
+  document.getElementById('loading-indicator').style.display = 'flex';
+  hideAllTabs();
+
+  const res  = await fetch(`/api/material/${encodeURIComponent(name)}`);
+  const data = await res.json();
+  document.getElementById('loading-indicator').style.display = 'none';
+
+  currentMaterial   = name;
+  currentData       = data;
+  currentCompute    = null;
+  gammaComputeCache = null;        // invalidate cached gamma weights on material change
+  disabledReactions = new Set();   // reset per-reaction toggles on material change
+
+  document.getElementById('data-source-badge').textContent = data.data_source;
+  document.getElementById('mat-title').textContent = data.name;
+  document.getElementById('mat-desc').textContent  = data.description;
+  renderIsotopePills(data.isotopes);
+  document.getElementById('panel-header').style.display = 'block';
+  // Switch away from Literature tab if returning to material-specific view
+  if (currentTab === 'literature') {
+    currentTab = 'activation';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-tab="activation"]').classList.add('active');
+  }
+  showTab(currentTab);
+}
+
+function renderIsotopePills(isotopes) {
+  const el = document.getElementById('iso-pills');
+  el.innerHTML = '';
+  Object.entries(isotopes).sort((a,b) => b[1]-a[1]).forEach(([iso,frac]) => {
+    const p = document.createElement('span');
+    p.className = 'iso-pill';
+    p.innerHTML = `<span>${iso}</span> ${(frac*100).toFixed(2)}%`;
+    el.appendChild(p);
+  });
+}
+
+// =============================================================
+// TABS
+// =============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    showTab(currentTab);
+  };
+});
+
+function hideAllTabs() {
+  ['activation','activity','gamma','comparison','composition','xsec','literature'].forEach(t =>
+    document.getElementById(`tab-${t}`).style.display = 'none');
+  document.getElementById('panel-header').style.display = 'none';
+}
+
+function showTab(tab) {
+  ['activation','activity','gamma','comparison','composition','xsec','literature'].forEach(t =>
+    document.getElementById(`tab-${t}`).style.display = (t === tab) ? 'block' : 'none');
+  // Literature and xsec tabs are material-independent — hide the empty-state and panel-header
+  const emptyEl = document.getElementById('empty-state');
+  if (tab === 'literature') {
+    emptyEl.style.display = 'none';
+    document.getElementById('panel-header').style.display = 'none';
+    renderLiteratureTab();
+    return;
+  }
+  if (tab === 'xsec') {
+    emptyEl.style.display = 'none';
+    document.getElementById('panel-header').style.display = currentData ? 'block' : 'none';
+    renderXsecTab();
+    return;
+  }
+  // Restore empty-state if no material selected
+  if (!currentData) emptyEl.style.display = 'block';
+  if (!currentData && tab !== 'comparison') return;
+  if (tab === 'activation')  { renderActivationTable(); updateDeltaColumnVisibility(); }
+  if (tab === 'activity')    renderActivityTab();
+  if (tab === 'gamma')       renderGammaChart();
+  if (tab === 'composition') renderCompositionChart();
+}
+
+// =============================================================
+// FILTERS
+// =============================================================
+['filter-thermal','filter-2p5mev','filter-14mev'].forEach(id =>
+  document.getElementById(id).addEventListener('change', () => {
+    if (currentTab === 'activation') { renderActivationTable(); updateDeltaColumnVisibility(); }
+    if (currentTab === 'gamma')      renderGammaChart();
+    if (currentTab === 'activity')   renderActivityTab();
+  }));
+
+// σ·f threshold re-renders table on input
+document.getElementById('inp-sigma-f-min').addEventListener('input', () => {
+  if (currentTab === 'activation') renderActivationTable();
+});
+
+// Toggle-all header checkbox
+document.getElementById('toggle-all-rxn').addEventListener('change', function() {
+  if (!currentData) return;
+  if (this.checked) {
+    disabledReactions.clear();
+  } else {
+    currentData.activation.forEach(row => {
+      disabledReactions.add(`${row.target}|${row.reaction}|${row.product}`);
+    });
+  }
+  renderActivationTable();
+  updateDeltaColumnVisibility();
+});
+
+function updateToggleAllState() {
+  const hdrCb = document.getElementById('toggle-all-rxn');
+  if (!hdrCb || !currentData) return;
+  const allKeys = currentData.activation.map(r => `${r.target}|${r.reaction}|${r.product}`);
+  const nDisabled = allKeys.filter(k => disabledReactions.has(k)).length;
+  hdrCb.indeterminate = nDisabled > 0 && nDisabled < allKeys.length;
+  hdrCb.checked       = nDisabled === 0;
+}
+
+['gamma-min-int','gamma-show-511'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => { if (currentTab === 'gamma') renderGammaChart(); });
+  el.addEventListener('input',  () => { if (currentTab === 'gamma') renderGammaChart(); });
+});
+
+// Normalization mode toggle
+document.getElementById('gamma-norm-decay').addEventListener('click', () => {
+  if (gammaNormMode === 'decay') return;
+  gammaNormMode = 'decay';
+  document.getElementById('gamma-norm-decay').classList.add('active');
+  document.getElementById('gamma-norm-fluence').classList.remove('active');
+  document.getElementById('gamma-cool-panel').style.display = 'none';
+  if (currentTab === 'gamma') renderGammaChart();
+});
+document.getElementById('gamma-norm-fluence').addEventListener('click', () => {
+  if (gammaNormMode === 'fluence') return;
+  gammaNormMode = 'fluence';
+  document.getElementById('gamma-norm-fluence').classList.add('active');
+  document.getElementById('gamma-norm-decay').classList.remove('active');
+  document.getElementById('gamma-cool-panel').style.display = 'block';
+  initGammaCoolSlider();
+  if (currentTab === 'gamma') renderGammaChart();
+});
+
+// Invalidate gamma compute cache when sidebar fluence inputs change
+['inp-fluence-th','inp-fluence-2p5','inp-fluence-14','inp-library'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    gammaComputeCache = null;
+    if (currentTab === 'gamma' && gammaNormMode === 'fluence') renderGammaChart();
+  });
+});
+
+// Filter a products array (from compute result) by the half-life slider range.
+function filterProductsByHalfLife(products) {
+  if (hlLogLow <= HL_LOG_MIN + 0.1 && hlLogHigh >= HL_LOG_MAX - 0.1) return products;
+  const sMin = Math.pow(10, hlLogLow);
+  const sMax = Math.pow(10, hlLogHigh);
+  return products.filter(p => {
+    const s = p.t_half_s;
+    if (s === null) return true;   // unknown half-life: always show
+    return s >= sMin && s <= sMax;
+  });
+}
+
+function getFilteredActivation() {
+  if (!currentData) return [];
+  const showTh   = document.getElementById('filter-thermal').checked;
+  const show2p5  = document.getElementById('filter-2p5mev').checked;
+  const show14   = document.getElementById('filter-14mev').checked;
+  const sfMinRaw = parseFloat(document.getElementById('inp-sigma-f-min').value);
+  const sfMin    = isNaN(sfMinRaw) ? 0 : sfMinRaw;
+  const sMin     = Math.pow(10, hlLogLow);
+  const sMax     = Math.pow(10, hlLogHigh);
+  const hlFull   = hlLogLow <= HL_LOG_MIN + 0.1 && hlLogHigh >= HL_LOG_MAX - 0.1;
+  const anyOn    = showTh || show2p5 || show14;
+
+  return currentData.activation.filter(row => {
+    if (row.t_half === 'Stable') return false;
+    if (!anyOn) return false;
+    // Half-life range filter
+    if (!hlFull && row.t_half_s !== null && (row.t_half_s < sMin || row.t_half_s > sMax)) return false;
+    // σ·f threshold filter (row must exceed threshold in at least one active regime)
+    if (sfMin > 0) {
+      const sf_th  = row.sigma_f_th  || 0;
+      const sf_2p5 = row.sigma_f_2p5 || 0;
+      const sf_14  = row.sigma_f_14  || 0;
+      const best = Math.max(showTh ? sf_th : 0, show2p5 ? sf_2p5 : 0, show14 ? sf_14 : 0);
+      if (best < sfMin) return false;
+    }
+    return true;
+  });
+}
+
+// =============================================================
+// ACTIVATION TABLE
+// =============================================================
+
+// Compute sigma_f for each row based on the active flux regime.
+// sigma_f = sigma * atom_frac for the relevant regime (b).
+// With both regimes active, sum thermal + fast contributions.
+function enrichSigmaF(rows) {
+  const showTh  = document.getElementById('filter-thermal').checked;
+  const show2p5 = document.getElementById('filter-2p5mev').checked;
+  const show14  = document.getElementById('filter-14mev').checked;
+  rows.forEach(row => {
+    const sf_th  = row.sigma_f_th  !== null ? row.sigma_f_th  : 0;
+    const sf_2p5 = row.sigma_f_2p5 !== null ? row.sigma_f_2p5 : 0;
+    const sf_14  = row.sigma_f_14  !== null ? row.sigma_f_14  : 0;
+    row.sigma_f = (showTh ? sf_th : 0) + (show2p5 ? sf_2p5 : 0) + (show14 ? sf_14 : 0);
+  });
+}
+
+function renderActivationTable() {
+  const rows = getFilteredActivation();
+  enrichSigmaF(rows);
+  sortRows(rows);
+  const tbody = document.getElementById('act-tbody');
+  tbody.innerHTML = '';
+  if (rows.length === 0) {
+    const ncols = 14 + (document.getElementById('filter-14mev').checked ? 1 : 0);
+    tbody.innerHTML = `<tr><td colspan="${ncols}" style="text-align:center;color:var(--muted);padding:30px;">No products match current filters.</td></tr>`;
+    return;
+  }
+  const maxFrac   = Math.max(...rows.map(r => r.atom_frac));
+  const maxSigmaF = Math.max(...rows.map(r => r.sigma_f || 0));
+  rows.forEach(row => {
+    const sfVal  = row.sigma_f;
+    const rxnKey = `${row.target}|${row.reaction}|${row.product}`;
+    const enabled = !disabledReactions.has(rxnKey);
+
+    // Bar width proportional to sigma_f for visual ranking cue
+    const sfBarW = maxSigmaF > 0 ? Math.round((sfVal / maxSigmaF) * 60) : 0;
+    const sfDisplay = sfVal > 0
+      ? `<div class="frac-bar-wrap"><div class="frac-bar" style="width:${sfBarW}px;background:#d29922"></div><span class="frac-val">${sfVal.toExponential(2)}</span></div>`
+      : '<span class="sigma-na">&mdash;</span>';
+    const tr = document.createElement('tr');
+    if (!enabled) tr.classList.add('row-disabled');
+    tr.innerHTML = `
+      <td style="text-align:center;"><input type="checkbox" class="rxn-check rxn-toggle" data-key="${rxnKey}" ${enabled ? 'checked' : ''}></td>
+      <td><code style="color:var(--text)">${row.target}</code></td>
+      <td><div class="frac-bar-wrap"><div class="frac-bar" style="width:${Math.round((row.atom_frac/maxFrac)*60)}px"></div><span class="frac-val">${(row.atom_frac*100).toFixed(3)}%</span></div></td>
+      <td><span class="reaction-tag">${row.reaction}</span></td>
+      <td><span class="product-tag">${row.product}</span></td>
+      <td class="sigma-val">${row.sigma_th !== null ? row.sigma_th.toPrecision(3) : '<span class="sigma-na">&mdash;</span>'}</td>
+      <td class="sigma-val">${row.sigma_2p5 !== null && row.sigma_2p5 !== undefined ? row.sigma_2p5.toPrecision(3) : '<span class="sigma-na" title="Reaction threshold above 2.45 MeV">&mdash;</span>'}</td>
+      <td class="sigma-val">${row.sigma_14 !== null ? row.sigma_14.toPrecision(3) : '<span class="sigma-na">&mdash;</span>'}</td>
+      <td class="col-delta sigma-val">${renderDeltaBadge(row.delta_14_pct)}</td>
+      <td class="sigma-val">${sfDisplay}</td>
+      <td>${row.threshold !== null ? row.threshold.toFixed(2) : '<span class="sigma-na">exo</span>'}</td>
+      <td class="${halfLifeClass(row.t_half_s)}">${row.t_half}</td>
+      <td>${row.decay_mode}</td>
+      <td>${renderGammaList(row.gammas)}</td>
+      <td style="white-space:nowrap;">${renderWasteBadge(row.waste_class)}</td>
+      <td class="notes-cell">${row.notes}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Wire up per-row toggles after DOM insertion
+  tbody.querySelectorAll('.rxn-toggle').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const key = cb.dataset.key;
+      if (cb.checked) { disabledReactions.delete(key); }
+      else            { disabledReactions.add(key); }
+      cb.closest('tr').classList.toggle('row-disabled', !cb.checked);
+      updateToggleAllState();
+    });
+  });
+  document.getElementById('table-source-note').textContent = `Data: ${currentData.data_source}`;
+}
+
+function renderGammaList(g) {
+  if (!g||g.length===0) return '<span class="sigma-na">&mdash;</span>';
+  return g.slice(0,4).map(([e,i]) => `<span class="gamma-item">${e.toFixed(1)}</span><span class="gamma-int"> (${i.toFixed(1)}%)</span>`).join('<br>');
+}
+function halfLifeClass(s) { if(s===null)return''; if(s<3600)return'hl-short'; if(s<2592000)return'hl-medium'; return'hl-long'; }
+
+function renderWasteBadge(wc) {
+  if (!wc) return '<span class="sigma-na">&mdash;</span>';
+  const cls = wc.tag.startsWith('NRC Class C') ? 'nrc-c'
+             : wc.tag.startsWith('NRC Class A') ? 'nrc-a'
+             : wc.tag.startsWith('IAEA')        ? 'iaea-cl'
+             : wc.tag.startsWith('Alpha')       ? 'alpha'
+             : 'nrc-a';
+  return `<span class="waste-badge ${cls}" title="${wc.limit}">${wc.tag}</span>`;
+}
+
+function renderDeltaBadge(d) {
+  if (d === null || d === undefined) return '<span class="sigma-na">&mdash;</span>';
+  const abs = Math.abs(d);
+  const sign = d >= 0 ? '+' : '';
+  const warn = abs >= 200 ? ' ⚠' : '';
+  let cls;
+  if      (abs < 5)   cls = 'delta-ok';
+  else if (abs < 20)  cls = 'delta-warn';
+  else if (abs < 200) cls = 'delta-high';
+  else                cls = 'delta-huge';
+  return `<span class="delta-badge ${cls}" title="FENDL-3.2c vs ENDF/B-VIII.0 at 14.1 MeV">${sign}${d.toFixed(1)}%${warn}</span>`;
+}
+
+function updateDeltaColumnVisibility() {
+  const show14 = document.getElementById('filter-14mev').checked;
+  document.querySelectorAll('.col-delta').forEach(el => {
+    el.classList.toggle('visible', show14);
+  });
+}
+
+
+function renderImpurityPanel(impurities) {
+  const panel = document.getElementById('impurity-panel');
+  if (!impurities || Object.keys(impurities).length === 0) {
+    panel.innerHTML = '';
+    return;
+  }
+  // Only show CRITICAL and high significance items in the callout; others are in the lit review
+  const sigOrder = { 'CRITICAL': 0, 'high': 1, 'moderate': 2, 'low': 3 };
+  const entries = Object.entries(impurities)
+    .sort((a, b) => (sigOrder[a[1].significance] ?? 9) - (sigOrder[b[1].significance] ?? 9));
+
+  const cards = entries.map(([elem, data]) => {
+    const sig   = (data.significance || 'low').toLowerCase();
+    const lo    = data.ppm_range?.[0];
+    const hi    = data.ppm_range?.[1];
+    const ppmTxt = (lo !== null && lo !== undefined && hi !== null && hi !== undefined)
+                    ? `${lo}–${hi} ppm`
+                    : (hi !== null && hi !== undefined) ? `≤${hi} ppm`
+                    : (lo !== null && lo !== undefined) ? `≥${lo} ppm`
+                    : '';
+    return `<div class="impurity-card sig-${sig}">
+      <div class="imp-header">
+        <span class="imp-elem">${elem}</span>
+        ${ppmTxt ? `<span class="imp-ppm">${ppmTxt}</span>` : ''}
+        <span class="sig-tag ${sig}">${data.significance || 'low'}</span>
+      </div>
+      <div class="imp-note">${data.note || ''}</div>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `<div class="impurity-panel">
+    <div class="impurity-panel-title">Known impurities &amp; activation significance</div>
+    <div class="impurity-grid">${cards}</div>
+  </div>`;
+}
+
+document.querySelectorAll('.act-table th[data-col]').forEach(th => {
+  th.onclick = () => {
+    const col = th.dataset.col;
+    if (sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=-1; }
+    document.querySelectorAll('.act-table th').forEach(t => t.classList.remove('sorted'));
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').textContent = sortDir===-1?'↓':'↑';
+    renderActivationTable();
+  };
+});
+function sortRows(rows) {
+  rows.sort((a,b) => {
+    let va=a[sortCol], vb=b[sortCol];
+    if(va===null||va===undefined) va=sortDir===-1?-Infinity:Infinity;
+    if(vb===null||vb===undefined) vb=sortDir===-1?-Infinity:Infinity;
+    if(typeof va==='string') return sortDir*va.localeCompare(vb);
+    return sortDir*(vb-va);
+  });
+}
+
+// =============================================================
+// COMPUTE — ACTIVITY & DOSE RATE
+// =============================================================
+function getIrradParams() {
+  const sfMinRaw = parseFloat(document.getElementById('inp-sigma-f-min').value);
+  return {
+    fluence_th:  parseFloat(document.getElementById('inp-fluence-th').value) || 0,
+    fluence_2p5: parseFloat(document.getElementById('inp-fluence-2p5').value) || 0,
+    fluence_14:  parseFloat(document.getElementById('inp-fluence-14').value) || 0,
+    distance_cm: parseFloat(document.getElementById('inp-distance').value) || 100,
+    sigma_f_min: isNaN(sfMinRaw) ? 0 : sfMinRaw,
+    library:     document.getElementById('inp-library').value || 'endf8',
+  };
+}
+
+function getEnabledReactions() {
+  // Returns null (all) if no reactions are disabled; otherwise a list of enabled keys.
+  if (!currentData || disabledReactions.size === 0) return null;
+  return currentData.activation
+    .map(r => `${r.target}|${r.reaction}|${r.product}`)
+    .filter(k => !disabledReactions.has(k));
+}
+
+async function computeForCurrent() {
+  if (!currentMaterial) return;
+  const p = getIrradParams();
+  const btn = document.getElementById('btn-compute');
+  btn.textContent = 'Computing…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/compute', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        materials:         [currentMaterial],
+        fluence_th:        p.fluence_th,
+        fluence_2p5:       p.fluence_2p5,
+        fluence_14:        p.fluence_14,
+        distance_cm:       p.distance_cm,
+        sigma_f_min:       p.sigma_f_min,
+        library:           p.library,
+        enabled_reactions: getEnabledReactions(),
+      }),
+    });
+    const data = await res.json();
+    currentCompute = data.results[currentMaterial] || null;
+
+    // Switch to activity tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-tab="activity"]').classList.add('active');
+    currentTab = 'activity';
+    showTab('activity');
+  } finally {
+    btn.textContent = 'Compute Activity & Dose';
+    btn.disabled = false;
+  }
+}
+
+// =============================================================
+// ACTIVITY & DOSE RATE TAB
+// =============================================================
+function renderActivityTab() {
+  const container = document.getElementById('activity-plots');
+  const info      = document.getElementById('activity-info');
+  const snapSec   = document.getElementById('snapshot-section');
+
+  if (!currentCompute || !currentCompute.time_s || currentCompute.time_s.length === 0) {
+    info.style.display = 'block';
+    container.innerHTML = '';
+    snapSec.style.display = 'none';
+    return;
+  }
+  info.style.display = 'none';
+
+  const c  = currentCompute;
+  const ts = c.time_s;
+
+  // Apply half-life filter to plotted products (same selector as the table).
+  // The "Total" line always shows the full computed sum regardless of filter.
+  const visibleProducts = filterProductsByHalfLife(c.products);
+
+  // -- Activity plot --
+  const actTraces = [makeTimeHeaderTrace(ts)];
+  visibleProducts.forEach((p,i) => actTraces.push({
+    x: ts, y: p.activity_Bq_per_g,
+    name: `${p.product} (${p.sources.join(' + ')})`,
+    type:'scatter', mode:'lines',
+    line: { color:PALETTE[i%PALETTE.length], width:1.5 },
+    hovertemplate: `${p.product}: %{y:.3e} Bq/g<extra></extra>`,
+  }));
+  actTraces.push({
+    x: ts, y: c.total_activity_Bq_per_g,
+    name: 'Total (all t½)',
+    type:'scatter', mode:'lines',
+    line: { color:'#e6edf3', width:2.5, dash:'dot' },
+    hovertemplate: 'Total: %{y:.3e} Bq/g<extra></extra>',
+  });
+
+  // -- Dose rate plot --
+  const drTraces = [makeTimeHeaderTrace(ts)];
+  visibleProducts.filter(p => p.dose_rate_uSv_per_h.some(v => v > 0)).forEach((p,i) => drTraces.push({
+    x: ts, y: p.dose_rate_uSv_per_h,
+    name: p.product,
+    type:'scatter', mode:'lines',
+    line: { color:PALETTE[i%PALETTE.length], width:1.5 },
+    hovertemplate: `${p.product}: %{y:.3e} µSv/h<extra></extra>`,
+  }));
+  drTraces.push({
+    x: ts, y: c.total_dose_rate_uSv_per_h,
+    name: 'Total (all t½)',
+    type:'scatter', mode:'lines',
+    line: { color:'#e6edf3', width:2.5, dash:'dot' },
+    hovertemplate: 'Total: %{y:.3e} µSv/h<extra></extra>',
+  });
+
+  container.innerHTML = '<div id="plot-activity" class="plotly-container"></div><div id="plot-doserate" class="plotly-container"></div>';
+
+  const xAxis = { type:'log', title:'Time after pulse (s)', color:'#8b949e', gridcolor:'#21262d',
+    tickvals: [1,60,600,3600,86400,604800,2.592e6,3.156e7],
+    ticktext: ['1 s','1 min','10 min','1 h','1 d','7 d','30 d','1 y'] };
+
+  Plotly.newPlot('plot-activity', actTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    ...UNIFIED_HOVER_LAYOUT,
+    title: { text:`Activity — ${currentMaterial}`, font:{size:13,color:'#e6edf3'} },
+    xaxis: {...xAxis},
+    yaxis: { type:'log', title:'Activity (Bq/g)', color:'#8b949e', gridcolor:'#21262d', exponentformat:'e', range:[-10, null] },
+    height: 370,
+  }, {responsive:true, displayModeBar:false});
+
+  // Reference lines for dose rate
+  const drShapes = [
+    { type:'line', y0:1, y1:1, x0:ts[0], x1:ts[ts.length-1], xref:'x', yref:'y',
+      line:{color:'#3fb950',width:1,dash:'dash'} },
+    { type:'line', y0:25, y1:25, x0:ts[0], x1:ts[ts.length-1], xref:'x', yref:'y',
+      line:{color:'#d29922',width:1,dash:'dash'} },
+  ];
+  const drAnnotations = [
+    { x:Math.log10(ts[ts.length-1]), y:Math.log10(1), xref:'x', yref:'y', text:'1 &mu;Sv/h',
+      showarrow:false, font:{size:9,color:'#3fb950'}, xanchor:'right', yanchor:'bottom' },
+    { x:Math.log10(ts[ts.length-1]), y:Math.log10(25), xref:'x', yref:'y', text:'25 &mu;Sv/h (occ.)',
+      showarrow:false, font:{size:9,color:'#d29922'}, xanchor:'right', yanchor:'bottom' },
+  ];
+
+  Plotly.newPlot('plot-doserate', drTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    ...UNIFIED_HOVER_LAYOUT,
+    title: { text:`Dose Rate H*(10) at ${c.distance_cm} cm — ${currentMaterial}`, font:{size:13,color:'#e6edf3'} },
+    xaxis: {...xAxis},
+    yaxis: { type:'log', title:'Ḣ*(10) (µSv/h)', color:'#8b949e', gridcolor:'#21262d', exponentformat:'e', range:[-10, null] },
+    shapes: drShapes,
+    annotations: drAnnotations,
+    height: 370,
+  }, {responsive:true, displayModeBar:false});
+
+  // -- Snapshot table --
+  renderSnapshotTable(c);
+}
+
+function renderSnapshotTable(c) {
+  const sec = document.getElementById('snapshot-section');
+  const thead = document.getElementById('snapshot-thead');
+  const tbody = document.getElementById('snapshot-tbody');
+  sec.style.display = 'block';
+
+  // Header
+  thead.innerHTML = '<tr><th>Cooling time</th><th>Total activity (Bq/g)</th><th>Total dose rate (&mu;Sv/h)</th><th>Dominant isotope</th></tr>';
+  tbody.innerHTML = '';
+
+  SNAPSHOT_LABELS.forEach((label, idx) => {
+    const t = SNAPSHOT_SECS[idx];
+    // Find closest time index
+    let best = 0;
+    let bestDiff = Infinity;
+    c.time_s.forEach((ts, i) => { const d = Math.abs(Math.log10(ts) - Math.log10(t)); if (d < bestDiff) { bestDiff=d; best=i; } });
+
+    const totA  = c.total_activity_Bq_per_g[best];
+    const totDR = c.total_dose_rate_uSv_per_h[best];
+
+    // Find dominant product
+    let domName = '—', domA = 0;
+    c.products.forEach(p => {
+      const a = p.activity_Bq_per_g[best];
+      if (a > domA) { domA = a; domName = p.product; }
+    });
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td><td>${fmtSci(totA)}</td><td>${fmtSci(totDR)}</td><td class="dominant">${domName}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function fmtSci(v) {
+  if (v === 0 || v === undefined || v === null) return '0';
+  if (v < 1e-20) return '&asymp;0';
+  return v.toExponential(2);
+}
+
+// Convert seconds to a compact human-readable string for hover tooltips.
+// Returns e.g. "4.5 min", "2.30 h", "8.1 d", "1.24 y".
+function fmtTimeSec(s) {
+  if (s < 90)           return s.toFixed(1) + ' s';
+  if (s < 3600)         return (s / 60).toFixed(1) + ' min';
+  if (s < 86400)        return (s / 3600).toFixed(2) + ' h';
+  if (s < 730 * 86400)  return (s / 86400).toFixed(1) + ' d';
+  return (s / (365.25 * 86400)).toFixed(2) + ' y';
+}
+
+// Build a customdata array for Plotly traces: each element is the human-readable
+// time string corresponding to that point's x value (in seconds).
+function timeCustomData(time_s) {
+  return time_s.map(fmtTimeSec);
+}
+
+// Ghost trace: invisible on the chart, exists only to put a single labelled
+// time entry at the top of the unified hover tooltip.
+// Must be the FIRST trace in the array passed to Plotly.newPlot.
+// Uses a hidden secondary y-axis with constant y=1 so Plotly includes it
+// in unified hover (null y values are skipped by Plotly hover logic).
+function makeTimeHeaderTrace(time_s) {
+  return {
+    x: time_s,
+    y: new Array(time_s.length).fill(1),   // non-null — needed for hover participation
+    customdata: timeCustomData(time_s),
+    type: 'scatter',
+    mode: 'lines',
+    line: { width: 0 },                    // invisible
+    showlegend: false,
+    name: '',
+    yaxis: 'y2',                           // secondary hidden axis — doesn't affect main scale
+    hovertemplate: 't = %{x:.4g} s (%{customdata})<extra></extra>',
+  };
+}
+
+// Layout additions needed alongside hovermode:'x unified' when using makeTimeHeaderTrace.
+const UNIFIED_HOVER_LAYOUT = {
+  hovermode: 'x unified',
+  yaxis2: { visible: false, overlaying: 'y', range: [0, 2], fixedrange: true },
+};
+
+// =============================================================
+// GAMMA SPECTRUM (existing, minor update)
+// =============================================================
+async function renderGammaChart() {
+  const rows    = getFilteredActivation();
+  const minInt  = parseFloat(document.getElementById('gamma-min-int').value) || 0;
+  const show511 = document.getElementById('gamma-show-511').checked;
+  const productColors = {}; let ci = 0;
+  const lines = [];
+
+  // ---- Per-fluence mode: get activity weights ----
+  let weights = null;
+  if (gammaNormMode === 'fluence') {
+    weights = await getGammaWeights();
+    // If compute hasn't been run yet with non-zero fluence, show an info message
+    if (!weights || Object.keys(weights).length === 0) {
+      if (gammaChartInst) { gammaChartInst.destroy(); gammaChartInst = null; }
+      document.getElementById('gamma-chart-container').innerHTML =
+        '<div style="padding:40px;color:var(--muted);text-align:center;">Run a non-zero fluence in the sidebar to see the fluence-weighted spectrum.</div>';
+      return;
+    }
+    // Restore canvas if it was replaced
+    if (!document.getElementById('gamma-chart')) {
+      document.getElementById('gamma-chart-container').innerHTML = '<canvas id="gamma-chart"></canvas>';
+    }
+  }
+
+  // ---- Build raw lines ----
+  rows.forEach(row => {
+    if (!row.gammas || row.gammas.length === 0) return;
+    if (!productColors[row.product]) { productColors[row.product] = PALETTE[ci % PALETTE.length]; ci++; }
+    const col = productColors[row.product];
+
+    if (gammaNormMode === 'decay') {
+      row.gammas.forEach(([e, intensity_pct]) => {
+        if (!show511 && Math.abs(e - 511) < 1) return;
+        if (intensity_pct < minInt) return;
+        lines.push({ x: e, y: intensity_pct, label: row.product, color: col });
+      });
+    } else {
+      // fluence mode: scale by activity at chosen cooling time
+      const act = weights[row.product] ?? 0;
+      if (act <= 0) return; // product not activated — omit
+      row.gammas.forEach(([e, intensity_pct]) => {
+        if (!show511 && Math.abs(e - 511) < 1) return;
+        // Emission rate: photons/s/g
+        const y_raw = (intensity_pct / 100.0) * act;
+        lines.push({ x: e, y: y_raw, label: row.product, color: col, _raw: y_raw });
+      });
+    }
+  });
+
+  // ---- Apply fluence-mode filter (fraction of max) ----
+  if (gammaNormMode === 'fluence' && lines.length > 0) {
+    const maxY = Math.max(...lines.map(l => l.y));
+    const threshold = (minInt / 100.0) * maxY;
+    lines.splice(0, lines.length, ...lines.filter(l => l.y >= threshold));
+  }
+
+  lines.sort((a, b) => a.x - b.x);
+
+  // ---- Ensure canvas exists (may have been replaced by info message) ----
+  if (!document.getElementById('gamma-chart')) {
+    document.getElementById('gamma-chart-container').innerHTML = '<canvas id="gamma-chart"></canvas>';
+  }
+
+  // ---- Update UI labels ----
+  const isDecay = gammaNormMode === 'decay';
+  document.getElementById('gamma-chart-title').textContent = isDecay
+    ? 'Gamma lines — energy (keV) vs. intensity (photons / 100 decays)'
+    : `Gamma lines — energy (keV) vs. emission rate at t = ${fmtHL(gammaCoolLogT)} (photons/s/g)`;
+  document.getElementById('gamma-min-int-label').firstChild.textContent = isDecay
+    ? 'Min. intensity (%): '
+    : 'Min. (% of peak): ';
+  document.getElementById('gamma-ref-note').textContent = isDecay
+    ? 'Each line corresponds to a unique activation product. Intensities are absolute (photons per 100 decays of that product), not weighted by production rate.'
+    : `Emission rates weighted by computed activity at t = ${fmtHL(gammaCoolLogT)} after end of irradiation. Fluence from sidebar inputs.`;
+
+  // ---- Draw chart ----
+  if (gammaChartInst) { gammaChartInst.destroy(); gammaChartInst = null; }
+  const ctx = document.getElementById('gamma-chart').getContext('2d');
+  const datasets = {};
+  lines.forEach(l => {
+    if (!datasets[l.label]) datasets[l.label] = {
+      label: l.label, data: [],
+      backgroundColor: productColors[l.label] + 'cc',
+      borderColor:     productColors[l.label],
+      borderWidth: 1, barThickness: 10, minBarLength: 4,
+    };
+    datasets[l.label].data.push({ x: l.x, y: l.y });
+  });
+
+  const allE = [...new Set(lines.map(l => l.x))].sort((a, b) => a - b);
+  const yLabel = isDecay ? 'Intensity (photons / 100 decays)' : 'Emission rate (photons/s/g)';
+  const tooltipLabel = isDecay
+    ? item => `${item.dataset.label}: ${item.parsed.y.toFixed(2)}%`
+    : item => `${item.dataset.label}: ${item.parsed.y.toExponential(3)} γ/s/g`;
+
+  gammaChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: allE, datasets: Object.values(datasets) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: { size: 11 } } },
+        tooltip: { callbacks: { title: i => `E = ${i[0].label} keV`, label: tooltipLabel } },
+      },
+      scales: {
+        x: { title: { display: true, text: 'Energy (keV)', color: '#8b949e' }, ticks: { color: '#8b949e', maxRotation: 45 }, grid: { color: '#21262d' } },
+        y: { title: { display: true, text: yLabel, color: '#8b949e' }, ticks: { color: '#8b949e' }, grid: { color: '#21262d' }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+// =============================================================
+// COMPARISON TAB
+// =============================================================
+function renderComparisonChecklist(cats) {
+  // --- Material buttons ---
+  const grid = document.getElementById('comp-mat-grid');
+  grid.innerHTML = '';
+  const allNames = Object.values(cats).flat();
+  allNames.forEach(name => {
+    const id = 'comp-'+name.replace(/[^a-zA-Z0-9]/g,'');
+    grid.innerHTML += `<label class="comp-mat-check"><input type="checkbox" id="${id}" value="${name}" /><label for="${id}">${name}</label></label>`;
+  });
+
+  // --- Energy bin buttons (built once) ---
+  const egrid = document.getElementById('comp-energy-grid');
+  if (egrid.children.length === 0) {
+    ENERGY_PRESETS.forEach(ep => {
+      const lbl = document.createElement('label');
+      lbl.className = 'comp-energy-check';
+      lbl.innerHTML = `<input type="checkbox" value="${ep.id}" /><label>${ep.label}</label>`;
+      egrid.appendChild(lbl);
+    });
+    // Default: DT checked
+    const dtChk = egrid.querySelector('input[value="dt"]');
+    if (dtChk) dtChk.checked = true;
+  }
+}
+
+async function computeComparison() {
+  const checkedMats = [...document.querySelectorAll('#comp-mat-grid input:checked')].map(cb => cb.value);
+  const checkedEps  = [...document.querySelectorAll('#comp-energy-grid input:checked')].map(cb => cb.value);
+
+  if (checkedMats.length < 1) return alert('Select at least one material.');
+  if (checkedEps.length  < 1) return alert('Select at least one energy condition.');
+
+  const p       = getIrradParams();
+  const fluence = parseFloat(document.getElementById('comp-fluence').value) || 1e14;
+
+  // Resolve selected energy bins
+  const selectedEps = checkedEps.map(id => ENERGY_PRESETS.find(e => e.id === id)).filter(Boolean);
+
+  // Build all (material × energy bin) combinations.
+  // Each combo zeroes the two other bins and puts `fluence` in the selected one.
+  const combos = [];
+  checkedMats.forEach(mat => {
+    selectedEps.forEach(ep => {
+      const label = selectedEps.length > 1 ? `${mat} · ${ep.label}` : mat;
+      const fluences = { fluence_th: 0, fluence_2p5: 0, fluence_14: 0 };
+      fluences[ep.field] = fluence;
+      combos.push({ mat, ep, label, fluences });
+    });
+  });
+
+  // Parallel fetch — one call per combo
+  const fetched = await Promise.all(combos.map(({ mat, fluences }) =>
+    fetch('/api/compute', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        materials:   [mat],
+        fluence_th:  fluences.fluence_th,
+        fluence_2p5: fluences.fluence_2p5,
+        fluence_14:  fluences.fluence_14,
+        distance_cm: p.distance_cm,
+        sigma_f_min: p.sigma_f_min,
+        library:     p.library,
+      }),
+    }).then(r => r.json()).catch(() => null)
+  ));
+
+  // Build { label → result } map
+  const results = {};
+  combos.forEach(({ mat, label }, i) => {
+    const d = fetched[i];
+    if (d && d.results && d.results[mat]) results[label] = d.results[mat];
+  });
+
+  const container = document.getElementById('comp-plots');
+  container.innerHTML = '<div id="comp-plot-activity" class="plotly-container"></div><div id="comp-plot-dose" class="plotly-container"></div>';
+
+  const traceLabels = Object.keys(results);
+  const actTraces   = [];
+  const drTraces    = [];
+
+  // All scenarios share the same time axis — use the first result's time_s for the header trace.
+  const firstResult = results[traceLabels[0]];
+  const sharedTs    = firstResult ? firstResult.time_s : [];
+  actTraces.push(makeTimeHeaderTrace(sharedTs));
+  drTraces.push(makeTimeHeaderTrace(sharedTs));
+
+  traceLabels.forEach((label, i) => {
+    const r = results[label];
+    if (!r || !r.time_s || r.time_s.length === 0) return;
+    const color = PALETTE[i % PALETTE.length];
+    actTraces.push({
+      x: r.time_s, y: r.total_activity_Bq_per_g,
+      name: label, type:'scatter', mode:'lines',
+      line: { color, width:2 },
+      hovertemplate: `${label}: %{y:.3e} Bq/g<extra></extra>`,
+    });
+    drTraces.push({
+      x: r.time_s, y: r.total_dose_rate_uSv_per_h,
+      name: label, type:'scatter', mode:'lines',
+      line: { color, width:2 },
+      hovertemplate: `${label}: %{y:.3e} µSv/h<extra></extra>`,
+    });
+  });
+
+  const xAxis = { type:'log', title:'Time after pulse (s)', color:'#8b949e', gridcolor:'#21262d',
+    tickvals:[1,60,600,3600,86400,604800,2.592e6,3.156e7],
+    ticktext:['1 s','1 min','10 min','1 h','1 d','7 d','30 d','1 y'] };
+
+  const legendCfg = {
+    font:{size:10}, bgcolor:'rgba(13,17,23,0.78)',
+    bordercolor:'#30363d', borderwidth:1,
+    x:0.01, xanchor:'left', y:0.99, yanchor:'top',
+  };
+
+  Plotly.newPlot('comp-plot-activity', actTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    ...UNIFIED_HOVER_LAYOUT,
+    title:{ text:'Total Activity — Comparison', font:{size:13,color:'#e6edf3'} },
+    xaxis:{...xAxis},
+    yaxis:{ type:'log', title:'Activity (Bq/g)', color:'#8b949e', gridcolor:'#21262d', exponentformat:'e', range:[-10, null] },
+    legend: legendCfg,
+    height:370,
+  }, {responsive:true, displayModeBar:false});
+
+  Plotly.newPlot('comp-plot-dose', drTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    ...UNIFIED_HOVER_LAYOUT,
+    title:{ text:`Total Dose Rate H*(10) at ${p.distance_cm} cm — Comparison`, font:{size:13,color:'#e6edf3'} },
+    xaxis:{...xAxis},
+    yaxis:{ type:'log', title:'Ḣ*(10) (µSv/h)', color:'#8b949e', gridcolor:'#21262d', exponentformat:'e', range:[-10, null] },
+    legend: legendCfg,
+    shapes:[
+      { type:'line', y0:1,  y1:1,  x0:1, x1:3.156e7, xref:'x', yref:'y', line:{color:'#3fb950',width:1,dash:'dash'} },
+      { type:'line', y0:25, y1:25, x0:1, x1:3.156e7, xref:'x', yref:'y', line:{color:'#d29922',width:1,dash:'dash'} },
+    ],
+    annotations:[
+      { x:Math.log10(3.156e7), y:Math.log10(1),  xref:'x', yref:'y', text:'1 µSv/h',        showarrow:false, font:{size:9,color:'#3fb950'}, xanchor:'right', yanchor:'bottom' },
+      { x:Math.log10(3.156e7), y:Math.log10(25), xref:'x', yref:'y', text:'25 µSv/h (occ.)', showarrow:false, font:{size:9,color:'#d29922'}, xanchor:'right', yanchor:'bottom' },
+    ],
+    height:370,
+  }, {responsive:true, displayModeBar:false});
+
+  // Comparison snapshot table
+  renderComparisonSnapshot(results, p.distance_cm);
+}
+
+function renderComparisonSnapshot(results, distCm) {
+  const sec  = document.getElementById('comp-snapshot-section');
+  const wrap = document.getElementById('comp-snapshot-wrap');
+  sec.style.display = 'block';
+
+  const mats = Object.keys(results);
+  let html = '<table class="snapshot-table"><thead><tr><th>Cooling time</th>';
+  mats.forEach(m => { html += `<th colspan="2">${m}</th>`; });
+  html += '</tr><tr><th></th>';
+  mats.forEach(() => { html += '<th>Bq/g</th><th>&mu;Sv/h</th>'; });
+  html += '</tr></thead><tbody>';
+
+  SNAPSHOT_LABELS.forEach((label,idx) => {
+    const t = SNAPSHOT_SECS[idx];
+    html += `<tr><td>${label}</td>`;
+    mats.forEach(m => {
+      const r = results[m];
+      if (!r || !r.time_s || r.time_s.length===0) { html += '<td>&mdash;</td><td>&mdash;</td>'; return; }
+      let best=0, bestD=Infinity;
+      r.time_s.forEach((ts,i) => { const d=Math.abs(Math.log10(ts)-Math.log10(t)); if(d<bestD){bestD=d;best=i;} });
+      html += `<td>${fmtSci(r.total_activity_Bq_per_g[best])}</td>`;
+      html += `<td>${fmtSci(r.total_dose_rate_uSv_per_h[best])}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// =============================================================
+// ISOTOPIC COMPOSITION (existing)
+// =============================================================
+function renderCompositionChart() {
+  if (!currentData) return;
+  const sorted = Object.entries(currentData.isotopes).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(([k])=>k);
+  const values = sorted.map(([,v])=>v*100);
+
+  if (isoChartInst) { isoChartInst.destroy(); isoChartInst=null; }
+  const ctx = document.getElementById('iso-chart').getContext('2d');
+  isoChartInst = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Atom fraction (%)', data:values, backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'), borderColor:labels.map((_,i)=>PALETTE[i%PALETTE.length]), borderWidth:1 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:i=>`${i.label}: ${i.parsed.y.toFixed(4)}%` } } },
+      scales:{ x:{ticks:{color:'#8b949e'},grid:{color:'#21262d'}}, y:{title:{display:true,text:'Atom fraction (%)',color:'#8b949e'},ticks:{color:'#8b949e'},grid:{color:'#21262d'},beginAtZero:true} },
+    },
+  });
+
+  const wrap = document.getElementById('iso-table-wrap');
+  wrap.innerHTML = `<table class="act-table" style="max-width:400px;">
+    <thead><tr><th>Isotope</th><th>Atom fraction</th><th>In ENDF/B reactions?</th></tr></thead>
+    <tbody>${sorted.map(([iso,frac]) => {
+      const inDb = currentData.activation.some(r => r.target === iso);
+      return `<tr><td><code>${iso}</code></td><td>${(frac*100).toFixed(4)}%</td><td>${inDb?'<span style="color:var(--green)">&#10003;</span>':'<span style="color:var(--muted)">&mdash;</span>'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+
+  renderImpurityPanel(currentData.impurities || {});
+}
+
+// =============================================================
+// LITERATURE TAB
+// =============================================================
+async function renderLiteratureTab() {
+  const loadingEl = document.getElementById('lit-loading');
+  const mainEl    = document.getElementById('lit-main');
+
+  if (literatureData) {
+    // Already fetched — just re-render current selection
+    mainEl.style.display    = 'block';
+    loadingEl.style.display = 'none';
+    renderLitDoc(currentLitDoc);
+    return;
+  }
+
+  loadingEl.textContent    = 'Loading literature…';
+  loadingEl.style.display  = 'block';
+  mainEl.style.display     = 'none';
+
+  try {
+    const [litRes, refRes] = await Promise.all([
+      fetch('/api/literature'),
+      fetch('/api/references'),
+    ]);
+    const litJson = await litRes.json();
+    const refJson = await refRes.json();
+    literatureData = { docs: litJson.docs || [], refs: refJson.references || [] };
+
+    // Build file selector buttons
+    const selector = document.getElementById('lit-file-selector');
+    selector.innerHTML = '';
+    literatureData.docs.forEach((doc, i) => {
+      const btn = document.createElement('button');
+      btn.className   = 'lit-file-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = doc.title;
+      btn.dataset.filename = doc.filename;
+      btn.onclick = () => {
+        document.querySelectorAll('.lit-file-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('lit-refs-btn').classList.remove('active');
+        renderLitDoc(doc.filename);
+      };
+      selector.appendChild(btn);
+    });
+
+    // Build references grid
+    buildRefsGrid(literatureData.refs);
+
+    // Show first doc by default
+    currentLitDoc = literatureData.docs.length > 0 ? literatureData.docs[0].filename : null;
+    loadingEl.style.display = 'none';
+    mainEl.style.display    = 'block';
+    renderLitDoc(currentLitDoc);
+
+  } catch (e) {
+    loadingEl.textContent = `Error loading literature: ${e.message}`;
+  }
+}
+
+function renderLitDoc(filename) {
+  currentLitDoc = filename;
+  const contentEl  = document.getElementById('lit-content');
+  const refsSec    = document.getElementById('lit-refs-section');
+  refsSec.style.display   = 'none';
+  contentEl.style.display = 'block';
+
+  if (!filename || !literatureData) { contentEl.innerHTML = ''; return; }
+  const doc = literatureData.docs.find(d => d.filename === filename);
+  if (!doc) { contentEl.innerHTML = '<p style="color:var(--muted);">Document not found.</p>'; return; }
+
+  // Render markdown via marked.js
+  contentEl.innerHTML = marked.parse(doc.content);
+}
+
+function showLitRefs() {
+  const contentEl = document.getElementById('lit-content');
+  const refsSec   = document.getElementById('lit-refs-section');
+  contentEl.style.display = 'none';
+  refsSec.style.display   = 'block';
+
+  // Mark refs button as active, deselect doc buttons
+  document.querySelectorAll('.lit-file-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('lit-refs-btn').classList.add('active');
+}
+
+function buildRefsGrid(refs) {
+  const grid = document.getElementById('refs-grid');
+  if (!refs || refs.length === 0) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:.82rem;">No references loaded.</p>';
+    return;
+  }
+  grid.innerHTML = refs.map(r => {
+    const meta   = [r.journal || r.series || r.institution, r.volume ? `vol. ${r.volume}` : null, r.pages, r.year].filter(Boolean).join(', ');
+    const linkEl = r.url ? `<br><a href="${r.url}" target="_blank" rel="noopener">${r.url.replace('https://','')}</a>` : '';
+    return `<div class="ref-card">
+      <span class="ref-tag">${r.tag || r.type || ''}</span>
+      <div class="ref-title">${r.title}</div>
+      <div class="ref-authors">${r.authors}</div>
+      <div class="ref-meta">${meta}${linkEl}</div>
+      ${r.notes ? `<div class="ref-notes">${r.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// =============================================================
+// CROSS SECTIONS σ(E) TAB
+// =============================================================
+
+// Stable ordered list of all checkable (isotope||reaction) keys for current material.
+// Built once per material; determines color assignment.
+let _xsecItemOrder = [];
+
+function _buildItemOrder() {
+  if (!currentData) return [];
+  // Use xsec_reactions (all reactions including to stable products) if available;
+  // fall back to activation table (excludes stable-product reactions like Fe-56(n,γ)).
+  // xsec_reactions values are now [{reaction, product, stable, t_half}] objects.
+  const xsecRxns = currentData.xsec_reactions || {};
+  const targets  = Object.keys(xsecRxns).sort();
+  if (targets.length === 0) return [];
+  const items = [];
+  targets.forEach(iso => {
+    (xsecRxns[iso] || []).forEach(rxnObj => {
+      const rxn = (typeof rxnObj === 'object') ? rxnObj.reaction : rxnObj;
+      items.push(`${iso}||${rxn}`);
+    });
+    items.push(`${iso}||(n,total)`);
+  });
+  return items;
+}
+
+function _xsecColor(key) {
+  if (!(key in xsecColorAssign)) {
+    xsecColorAssign[key] = Object.keys(xsecColorAssign).length;
+  }
+  return PALETTE[xsecColorAssign[key] % PALETTE.length];
+}
+
+// Library mode buttons
+document.querySelectorAll('.xsec-lib-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.xsec-lib-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    xsecLibraryMode = btn.dataset.lib;
+    refreshXsecPlot();
+  };
+});
+
+
+function renderXsecTab() {
+  const emptyMsg  = document.getElementById('xsec-empty-msg');
+  const plotDiv   = document.getElementById('xsec-plot');
+  const noDataMsg = document.getElementById('xsec-no-data-msg');
+  const refTable  = document.getElementById('xsec-ref-table');
+  const inner     = document.getElementById('xsec-checklist-inner');
+
+  if (!currentData) {
+    emptyMsg.style.display  = 'block';
+    plotDiv.style.display   = 'none';
+    noDataMsg.style.display = 'none';
+    refTable.innerHTML      = '';
+    inner.innerHTML = '<div class="xsec-panel-empty">Select a material to see isotopes.</div>';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+
+  // Reset state on material change; auto-check first activation reaction
+  if (currentMaterial !== xsecLastMaterial) {
+    xsecActiveTraces = new Set();
+    xsecColorAssign  = {};
+    xsecLastMaterial = currentMaterial;
+    _xsecItemOrder   = _buildItemOrder();
+    // Pre-assign colors in order so they're stable
+    _xsecItemOrder.forEach(k => _xsecColor(k));
+    // Auto-check first activation reaction (not total XS)
+    const firstAct = _xsecItemOrder.find(k => !k.endsWith('||(n,total)'));
+    if (firstAct) xsecActiveTraces.add(firstAct);
+  }
+
+  buildXsecChecklist();
+  refreshXsecPlot();
+}
+
+
+function buildXsecChecklist() {
+  const inner = document.getElementById('xsec-checklist-inner');
+  inner.innerHTML = '';
+  if (!currentData) return;
+
+  const xsecRxns = currentData.xsec_reactions || {};
+  const targets  = Object.keys(xsecRxns).sort();
+
+  targets.forEach(iso => {
+    // xsecRxns[iso] is [{reaction, product, stable, t_half}] or bare strings (fallback)
+    const rxnObjects = (xsecRxns[iso] || []).map(r =>
+      (typeof r === 'object') ? r : { reaction: r, product: null, stable: false, t_half: null }
+    );
+    const allItems = [
+      ...rxnObjects,
+      { reaction: '(n,total)', product: null, stable: true, t_half: null, _isTotal: true },
+    ];
+
+    // Isotope header with indeterminate checkbox
+    const group = document.createElement('div');
+    group.className = 'xsec-group';
+
+    const isoKeys  = allItems.map(r => `${iso}||${r.reaction}`);
+    const nChecked = isoKeys.filter(k => xsecActiveTraces.has(k)).length;
+
+    const hdr = document.createElement('label');
+    hdr.className = 'xsec-iso-hdr';
+
+    const isoChk = document.createElement('input');
+    isoChk.type          = 'checkbox';
+    isoChk.checked       = nChecked === isoKeys.length;
+    isoChk.indeterminate = nChecked > 0 && nChecked < isoKeys.length;
+    isoChk.addEventListener('change', () => {
+      isoKeys.forEach(k => {
+        if (isoChk.checked) xsecActiveTraces.add(k);
+        else                 xsecActiveTraces.delete(k);
+      });
+      buildXsecChecklist();
+      refreshXsecPlot();
+    });
+
+    const dotEl = document.createElement('span');
+    dotEl.className   = 'xsec-color-dot';
+    dotEl.style.background = _xsecColor(`${iso}||${rxnObjects[0]?.reaction || '(n,total)'}`);
+
+    hdr.appendChild(isoChk);
+    hdr.appendChild(dotEl);
+    hdr.appendChild(document.createTextNode(iso));
+    group.appendChild(hdr);
+
+    // Reaction rows
+    allItems.forEach(rxnObj => {
+      const rxn  = rxnObj.reaction;
+      const key  = `${iso}||${rxn}`;
+      const item = document.createElement('label');
+      item.className = 'xsec-rxn-item' + (rxnObj._isTotal ? ' xsec-rxn-total' : '');
+
+      const chk = document.createElement('input');
+      chk.type    = 'checkbox';
+      chk.checked = xsecActiveTraces.has(key);
+      chk.addEventListener('change', () => {
+        if (chk.checked) xsecActiveTraces.add(key);
+        else              xsecActiveTraces.delete(key);
+        buildXsecChecklist();
+        refreshXsecPlot();
+      });
+
+      const dot = document.createElement('span');
+      dot.className        = 'xsec-color-dot';
+      dot.style.background = _xsecColor(key);
+
+      item.appendChild(chk);
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(' ' + rxn));
+
+      // Product badge (skip for (n,total))
+      if (!rxnObj._isTotal && rxnObj.product) {
+        const badge = document.createElement('span');
+        badge.className = 'xsec-product-badge ' + (rxnObj.stable ? 'stable' : 'active-product');
+        if (rxnObj.stable) {
+          badge.textContent = '→ ' + rxnObj.product + ' stable';
+        } else {
+          // Shorten half-life for display: strip trailing " s" decimals, keep compact
+          const hl = rxnObj.t_half || '';
+          badge.textContent = '→ ' + rxnObj.product + ' ' + hl;
+        }
+        item.appendChild(badge);
+      }
+
+      group.appendChild(item);
+    });
+
+    inner.appendChild(group);
+  });
+
+  // Update trace count badge
+  const countEl = document.getElementById('xsec-trace-count');
+  const n = xsecActiveTraces.size;
+  const libMult = xsecLibraryMode === 'both' ? 2 : 1;
+  countEl.textContent = n > 0
+    ? `${n} reaction${n!==1?'s':''} × ${libMult} librar${libMult!==1?'ies':'y'} = ${n*libMult} trace${n*libMult!==1?'s':''}`
+    : '';
+}
+
+
+async function refreshXsecPlot() {
+  const plotDiv   = document.getElementById('xsec-plot');
+  const noDataMsg = document.getElementById('xsec-no-data-msg');
+  const refTable  = document.getElementById('xsec-ref-table');
+
+  noDataMsg.style.display = 'none';
+  refTable.innerHTML      = '';
+
+  if (xsecActiveTraces.size === 0) {
+    plotDiv.style.display = 'none';
+    return;
+  }
+
+  // Determine which libraries to fetch
+  const libs = xsecLibraryMode === 'both'
+    ? ['endf8', 'fendl32c']
+    : [xsecLibraryMode];
+
+  // Build fetch list: [{iso, rxn, lib, key}]
+  const fetchList = [];
+  xsecActiveTraces.forEach(traceKey => {
+    const [iso, rxn] = traceKey.split('||');
+    libs.forEach(lib => fetchList.push({ iso, rxn, lib, traceKey }));
+  });
+
+  // Parallel fetch all
+  const results = await Promise.all(
+    fetchList.map(async ({ iso, rxn, lib, traceKey }) => {
+      try {
+        const r = await fetch(
+          `/api/xsec/${encodeURIComponent(iso)}?reaction=${encodeURIComponent(rxn)}&library=${lib}`
+        );
+        const data = await r.json();
+        return { iso, rxn, lib, traceKey, data };
+      } catch (e) {
+        return { iso, rxn, lib, traceKey, data: { available: false, message: e.message } };
+      }
+    })
+  );
+
+  // Collect unavailable messages
+  const unavail = results.filter(r => !r.data.available).map(r => r.data.message || `${r.iso} ${r.rxn} (${r.lib}): not found`);
+
+  // Build Plotly traces
+  const traces    = [];
+  const E_POINTS  = [
+    { e: 0.0253,  key: 'sigma_th',  label: 'σ_th (thermal)',  color: '#3fb950' },
+    { e: 2.5e6,   key: 'sigma_2p5', label: 'σ_2.5 MeV',       color: '#d29922' },
+    { e: 14.1e6,  key: 'sigma_14',  label: 'σ_14 MeV',        color: '#f78166' },
+  ];
+  const LIB_LABEL = { endf8: 'ENDF/B-VIII.0', fendl32c: 'FENDL-3.2c' };
+  const LIB_DASH  = { endf8: 'solid',          fendl32c: 'dash'       };
+
+  const refRows = [];   // for three-point reference table
+
+  results.forEach(({ iso, rxn, lib, traceKey, data }) => {
+    if (!data.available) return;
+
+    const color   = _xsecColor(traceKey);
+    const isTotal = rxn === '(n,total)';
+    const dash    = LIB_DASH[lib] || 'solid';
+    const label   = xsecLibraryMode === 'both'
+      ? `${iso} ${rxn} (${LIB_LABEL[lib]})`
+      : `${iso} ${rxn}`;
+
+    traces.push({
+      x:    data.energy,
+      y:    data.xsec,
+      type: 'scatter',
+      mode: 'lines',
+      name: label,
+      line: { color, width: isTotal ? 1 : 1.5, dash },
+      hovertemplate: `${iso} ${rxn}<br>E: %{x:.4g} eV<br>σ: %{y:.4g} b<extra>${LIB_LABEL[lib]}</extra>`,
+      legendgroup: traceKey,
+    });
+
+    // Bundled three-point markers (only for endf8 activation reactions)
+    if (lib === 'endf8' && !isTotal && data.three_pt) {
+      const ptE = [], ptY = [], ptTxt = [], ptClr = [];
+      E_POINTS.forEach(pt => {
+        const val = data.three_pt[pt.key];
+        if (val !== null && val !== undefined && val > 0) {
+          ptE.push(pt.e);
+          ptY.push(val);
+          ptTxt.push(`${iso} ${rxn}<br>${pt.label}: ${val.toPrecision(4)} b`);
+          ptClr.push(pt.color);
+        }
+      });
+      if (ptE.length > 0) {
+        traces.push({
+          x:    ptE,
+          y:    ptY,
+          text: ptTxt,
+          type: 'scatter',
+          mode: 'markers',
+          name: `${iso} ${rxn} bundled`,
+          marker: { size:8, color:ptClr, symbol:'circle-open', line:{color:ptClr,width:2} },
+          hovertemplate: '%{text}<extra>bundled data.py</extra>',
+          legendgroup: traceKey,
+          showlegend: false,
+        });
+      }
+
+      // Collect for reference table
+      if (Object.values(data.three_pt).some(v => v !== null)) {
+        refRows.push({ iso, rxn, tp: data.three_pt, color });
+      }
+    }
+  });
+
+  // Show unavailability notes
+  if (unavail.length > 0) {
+    noDataMsg.innerHTML = unavail.map(m => `<div>${m}</div>`).join('');
+    noDataMsg.style.display = 'block';
+  }
+
+  if (traces.length === 0) {
+    plotDiv.style.display = 'none';
+    return;
+  }
+
+  // Energy reference lines
+  const shapes = E_POINTS.map(pt => ({
+    type: 'line',
+    x0: pt.e, x1: pt.e, y0: 0, y1: 1,
+    xref: 'x', yref: 'paper',
+    line: { color: pt.color, width: 1, dash: 'dot' },
+  }));
+  const annotations = E_POINTS.map(pt => ({
+    x: Math.log10(pt.e), y: 1.01,
+    xref: 'x', yref: 'paper',
+    text: pt.label,
+    showarrow: false,
+    font: { size: 8, color: pt.color },
+    xanchor: 'center', yanchor: 'bottom',
+  }));
+
+  const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
+    xaxis: {
+      title:     'Neutron energy (eV)',
+      type:      'log',
+      color:     '#8b949e',
+      gridcolor: '#21262d',
+      tickformat: '.0e',
+    },
+    yaxis: {
+      title:     'Cross section (barns)',
+      type:      'log',
+      color:     '#8b949e',
+      gridcolor: '#21262d',
+    },
+    shapes,
+    annotations,
+    height: 460,
+    margin:  { l:70, r:30, t:30, b:55 },
+    legend:  {
+      font:        { size:10 },
+      bgcolor:     'rgba(13,17,23,0.78)',
+      bordercolor: '#30363d',
+      borderwidth: 1,
+      x:           0.01,
+      xanchor:     'left',
+      y:           0.01,
+      yanchor:     'bottom',
+      orientation: 'v',
+    },
+    hovermode: 'closest',
+  });
+
+  plotDiv.style.display = 'block';
+  Plotly.react('xsec-plot', traces, layout, {
+    responsive:  true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['lasso2d','select2d','toImage'],
+    displaylogo: false,
+  });
+
+  // Reference table
+  if (refRows.length > 0) {
+    refTable.innerHTML = buildXsecRefTable(refRows);
+  }
+}
+
+
+function buildXsecRefTable(rows) {
+  let html = `<table class="act-table" style="max-width:600px;">
+    <thead><tr>
+      <th></th><th>Isotope</th><th>Reaction</th>
+      <th>σ_th (b)</th><th>σ_2.5MeV (b)</th><th>σ_14MeV (b)</th>
+      <th style="color:var(--muted);font-size:.70rem;">Source</th>
+    </tr></thead><tbody>`;
+  rows.forEach(({ iso, rxn, tp, color }) => {
+    const fmt = v => (v !== null && v !== undefined)
+      ? `<code style="color:var(--text)">${v.toPrecision(4)}</code>`
+      : '<span class="sigma-na">&mdash;</span>';
+    html += `<tr>
+      <td><span class="xsec-color-dot" style="background:${color}"></span></td>
+      <td><code>${iso}</code></td>
+      <td><span class="reaction-tag">${rxn}</span></td>
+      <td class="sigma-val">${fmt(tp.sigma_th)}</td>
+      <td class="sigma-val">${fmt(tp.sigma_2p5)}</td>
+      <td class="sigma-val">${fmt(tp.sigma_14)}</td>
+      <td style="color:var(--muted);font-size:.72rem;">ENDF/B-VIII.0 bundled</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// =============================================================
+// START
+// =============================================================
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,2493 @@
+"""
+Neutron activation nuclear data — ENDF/B-VIII.0 + FENDL-3.2c
+Source: National Nuclear Data Center (NNDC), Brookhaven National Laboratory
+        https://www.nndc.bnl.gov/endf/b8.0/
+        FENDL-3.2c: IAEA Nuclear Data Section, https://www-nds.iaea.org/fendl/
+
+Data version: ENDF/B-VIII.0 (released 2018), FENDL-3.2c (released 2023)
+Covers: activation cross-sections (thermal, 2.45 MeV, and 14.1 MeV), decay data,
+        gamma-ray emissions for pulsed-power-relevant structural materials.
+
+Cross-section values (sigma_th, sigma_2p5, sigma_14) are extracted by log-log
+interpolation from the downloaded pointwise JSON files via
+tools/extract_pointwise_3pt.py.  Hardcoded fallback values in REACTIONS serve
+only as documentation; at module load time they are overridden by the JSON files.
+
+Cross-section notation:
+  sigma_th  : 2200 m/s (0.0253 eV) cross-section, barns
+  sigma_2p5 : 2.45 MeV cross-section, barns (D-D fusion neutron energy)
+  sigma_14  : 14.1 MeV cross-section, barns (D-T fusion neutron energy)
+  threshold : reaction threshold energy, MeV (None = exothermic/sub-threshold)
+
+Decay data notation:
+  t_half    : half-life string (e.g. "2.245 min", "14.96 h", "312.2 d", "7.17e5 y")
+  t_half_s  : half-life in seconds (for sorting/calculation)
+  decay_mode: primary decay mode string
+  gammas    : list of [energy_keV, intensity_%] pairs, sorted by intensity desc
+              intensity is absolute (photons per 100 decays)
+"""
+
+import json
+import os as _os
+
+# ---------------------------------------------------------------------------
+# Activation reaction database
+# Each entry: target isotope → list of reactions
+# ---------------------------------------------------------------------------
+
+REACTIONS = {
+
+    # -----------------------------------------------------------------------
+    # ALUMINUM (Al)
+    # -----------------------------------------------------------------------
+    "Al-27": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Al-28",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.231, "sigma_2p5": 0.0004559, "sigma_14": 0.0006312},
+            },
+            "threshold":   None,        # exothermic
+            "t_half":      "2.245 min",
+            "t_half_s":    134.7,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1778.99, 100.0]],
+            "notes":       "Short-lived; dominant thermal capture product",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Mg-27",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 1.906e-05, "sigma_14": 0.07228},
+            },
+            "threshold":   1.83,
+            "t_half":      "9.458 min",
+            "t_half_s":    567.5,
+            "decay_mode":  "β⁻",
+            "gammas":      [[843.76, 71.8], [1014.52, 28.2]],
+            "notes":       "Fast-neutron reaction; relevant at 14 MeV",
+        },
+        {
+            "reaction":    "(n,α)",
+            "product":     "Na-24",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.1212},
+            },
+            "threshold":   3.25,
+            "t_half":      "14.957 h",
+            "t_half_s":    53845.2,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1368.63, 100.0], [2754.03, 99.855]],
+            "notes":       "High-sigma fast reaction; dominant long-lived hazard in Al",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Al-26",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.006753},
+            },
+            "threshold":   13.06,
+            "t_half":      "7.17×10⁵ y",
+            "t_half_s":    2.262e13,
+            "decay_mode":  "β⁺/EC",
+            "gammas":      [[1808.65, 99.76], [511.0, 82.0]],
+            "notes":       "Cosmogenic; near-threshold at 14.1 MeV; very long-lived",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # CHROMIUM — continued (Cr-54 missing from v1)
+    # -----------------------------------------------------------------------
+    "Cr-54": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cr-55",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.36, "sigma_2p5": 0.000928, "sigma_14": 0.0005471},
+            },
+            "threshold":   None,
+            "t_half":      "3.497 min",
+            "t_half_s":    209.8,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1528.0, 0.04]],  # confirmed ~0.04% from JAEA/NDS; Cr-55 is near-pure beta emitter
+            "notes":       "Near-pure beta emitter; gamma at 1528 keV only 0.04% intense — negligible gamma dose; "
+                           "sigma_14 estimated; Marc flagged this reaction as missing",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # IRON (Fe) — major constituent of all steels
+    # -----------------------------------------------------------------------
+    "Fe-54": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Fe-55",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.25, "sigma_2p5": 0.002324, "sigma_14": 0.0009967},
+            },
+            "threshold":   None,
+            "t_half":      "2.737 y",
+            "t_half_s":    8.634e7,
+            "decay_mode":  "EC",
+            "gammas":      [],          # EC to stable Mn-55; no significant gammas (Mn Kα X-rays only)
+            "notes":       "No significant gammas; produces soft X-rays from EC; dose concern for internal exposure",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Mn-54",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.06484, "sigma_14": 0.3389},
+            },
+            "threshold":   0.93,
+            "t_half":      "312.20 d",
+            "t_half_s":    2.697e7,
+            "decay_mode":  "EC",
+            "gammas":      [[834.848, 99.976]],
+            "notes":       "Long-lived; clean 835 keV gamma — useful activation monitor",
+        },
+        {
+            "reaction":    "(n,α)",
+            "product":     "Cr-51",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.015},
+            },
+            "threshold":   0.27,
+            "t_half":      "27.704 d",
+            "t_half_s":    2.394e6,
+            "decay_mode":  "EC",
+            "gammas":      [[320.082, 9.910]],
+            "notes":       "Low gamma yield; also produced by Cr-50(n,γ)",
+        },
+    ],
+    "Fe-56": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Fe-57",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.59, "sigma_2p5": 0.001735, "sigma_14": 0.0007956},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product is stable Fe-57; no activation concern",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Mn-56",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.1133},
+            },
+            "threshold":   5.48,
+            "t_half":      "2.579 h",
+            "t_half_s":    9284.4,
+            "decay_mode":  "β⁻",
+            "gammas":      [[846.771, 98.85], [1810.726, 26.90], [2113.123, 14.30]],
+            "notes":       "High-sigma 14 MeV reaction; most abundant Fe isotope → major short-term activation product",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Fe-55",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.4316},
+            },
+            "threshold":   11.20,
+            "t_half":      "2.737 y",
+            "t_half_s":    8.634e7,
+            "decay_mode":  "EC",
+            "gammas":      [],
+            "notes":       "Near-threshold at 14.1 MeV; same product as Fe-54(n,γ)",
+        },
+    ],
+    "Fe-57": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Fe-58",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.48, "sigma_2p5": 0.001355, "sigma_14": 0.001002},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product is stable Fe-58; no activation concern",
+        },
+    ],
+    "Fe-58": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Fe-59",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.28, "sigma_2p5": 0.001786, "sigma_14": 0.001154},
+            },
+            "threshold":   None,
+            "t_half":      "44.496 d",
+            "t_half_s":    3.844e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1099.245, 56.50], [1291.590, 43.20]],
+            "notes":       "Moderate-lived; dual gamma useful for spectroscopic ID",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # CHROMIUM (Cr) — main alloying element in stainless steel
+    # -----------------------------------------------------------------------
+    "Cr-50": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cr-51",
+            "cross_sections": {
+                "endf8": {"sigma_th": 15.9, "sigma_2p5": 0.002768, "sigma_14": 0.001068},
+            },
+            "threshold":   None,
+            "t_half":      "27.704 d",
+            "t_half_s":    2.394e6,
+            "decay_mode":  "EC",
+            "gammas":      [[320.082, 9.910]],
+            "notes":       "High thermal cross-section; Cr-50 is only 4.35% abundant but dominant Cr activation path",
+        },
+    ],
+    "Cr-52": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cr-53",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.114, "sigma_2p5": 0.001036, "sigma_14": 0.0008026},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product is stable Cr-53; no activation concern",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "V-52",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.0886},
+            },
+            "threshold":   2.97,
+            "t_half":      "3.743 min",
+            "t_half_s":    224.6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1434.08, 100.0]],
+            "notes":       "Short-lived; 1.43 MeV gamma",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Cr-51",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.2788},
+            },
+            "threshold":   12.33,       # MeV; S_n(Cr-52) ≈ 12.04 MeV → threshold = 12.04×53/52 = 12.27 MeV
+            "t_half":      "27.704 d",
+            "t_half_s":    2.394e6,
+            "decay_mode":  "EC",
+            "gammas":      [[320.082, 9.910]],
+            "notes":       "Same product as Cr-50(n,γ) and Fe-54(n,α); large σ_14 on 83.8% abundant Cr-52 — "
+                           "significant additional Cr-51 source at 14 MeV; sigma_14 from published 14 MeV data",
+        },
+    ],
+    "Cr-53": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cr-54",
+            "cross_sections": {
+                "endf8": {"sigma_th": 18.1, "sigma_2p5": 0.0009698, "sigma_14": 0.0009489},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product is stable Cr-54",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # NICKEL (Ni) — in stainless steel
+    # -----------------------------------------------------------------------
+    "Ni-58": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "Co-58",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.1014, "sigma_14": 0.3432},
+            },
+            "threshold":   0.40,
+            "t_half":      "70.86 d",
+            "t_half_s":    6.122e6,
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[810.759, 99.45], [1674.73, 0.517]],
+            "notes":       "Dominant Ni activation product; strong 811 keV gamma — common stainless ID signature",
+        },
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ni-59",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.517, "sigma_2p5": 0.003405, "sigma_14": 0.0008569},
+            },
+            "threshold":   None,
+            "t_half":      "7.6×10⁴ y",
+            "t_half_s":    2.398e12,
+            "decay_mode":  "EC",
+            "gammas":      [],
+            "notes":       "Very long-lived; no gammas; long-term dose concern",
+            "waste_class":  {"tag": "NRC Class C", "limit": "220 Ci/m³ (10 CFR 61 Table 2); EC/β+, low dose — long-lived LLW concern"},
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Ni-57",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.02489},
+            },
+            "threshold":   12.22,
+            "t_half":      "35.60 h",
+            "t_half_s":    1.282e5,
+            "decay_mode":  "β⁺/EC",
+            "gammas":      [[127.164, 16.7], [1377.63, 81.7], [1919.52, 12.3]],
+            "notes":       "Near-threshold at 14.1 MeV",
+        },
+        {
+            "reaction":    "(n,α)",
+            "product":     "Fe-55",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.00305, "sigma_14": 0.1053},
+            },
+            "threshold":   None,        # Q > 0; Coulomb barrier suppresses thermal rate to negligible
+            "t_half":      "2.737 y",
+            "t_half_s":    8.634e7,
+            "decay_mode":  "EC",
+            "gammas":      [],
+            "notes":       "Same product as Fe-54(n,γ); sigma_14 estimated; adds to Fe-55 inventory in Ni-bearing materials at 14 MeV",
+        },
+    ],
+    "Ni-60": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ni-61",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.9, "sigma_2p5": 0.003135, "sigma_14": 0.0009003},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product stable",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Co-60",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 1.997e-13, "sigma_14": 0.1571},
+            },
+            "threshold":   2.08,        # MeV; Q ≈ −2.04 MeV → threshold = 2.04×61/60 = 2.08 MeV
+            "t_half":      "5.2714 y",
+            "t_half_s":    1.6632e8,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1173.228, 99.85], [1332.492, 99.9826]],
+            "notes":       "CRITICAL: dominant long-term gamma dose driver in irradiated stainless steel; "
+                           "absent from v1 database; sigma_14 ~28 mb (ENDF eval; range 14–35 mb in EXFOR); "
+                           "Co-60 gammas are well-established standards",
+            "waste_class":  {"tag": "NRC Class A", "limit": "700 Ci/m³ (10 CFR 61 Table 1); IAEA clearance 0.1 Bq/g"},
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Ni-59",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.3739},
+            },
+            "threshold":   11.58,       # MeV; S_n(Ni-60) ≈ 11.39 MeV → threshold = 11.39×61/60 = 11.58 MeV
+            "t_half":      "7.6×10⁴ y",
+            "t_half_s":    2.398e12,
+            "decay_mode":  "EC",
+            "gammas":      [],
+            "notes":       "Same product as Ni-58(n,γ); sigma_14 estimated; very long-lived EC, no significant gammas",
+            "waste_class":  {"tag": "NRC Class C", "limit": "220 Ci/m³ (10 CFR 61 Table 2); EC/β+, low dose — long-lived LLW concern"},
+        },
+    ],
+    "Ni-64": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ni-65",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.52, "sigma_2p5": 0.001657, "sigma_14": 0.0005163},
+            },
+            "threshold":   None,
+            "t_half":      "2.5175 h",
+            "t_half_s":    9063.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1481.84, 23.59], [1115.54, 15.10]],
+            "notes":       "Moderate σ_th; Ni-65 gammas from ENSDF (moderate confidence — verify vs NuDat3); "
+                           "same product as Cu-65(n,p)",
+        },
+    ],
+    "Ni-62": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ni-63",
+            "cross_sections": {
+                "endf8": {"sigma_th": 14.5, "sigma_2p5": 0.002879, "sigma_14": 0.0007241},
+            },
+            "threshold":   None,
+            "t_half":      "100.1 y",
+            "t_half_s":    3.158e9,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "Pure beta emitter; long-lived; no gamma — relevant for waste classification",
+            "waste_class":  {"tag": "NRC Class C", "limit": "700 Ci/m³ (10 CFR 61 Table 2); pure β emitter, no direct gamma dose"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # MANGANESE (Mn) — present as impurity/alloying in steels
+    # -----------------------------------------------------------------------
+    "Mn-55": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mn-56",
+            "cross_sections": {
+                "endf8": {"sigma_th": 13.3, "sigma_2p5": 0.001506, "sigma_14": 0.0006239},
+            },
+            "threshold":   None,
+            "t_half":      "2.579 h",
+            "t_half_s":    9284.4,
+            "decay_mode":  "β⁻",
+            "gammas":      [[846.771, 98.85], [1810.726, 26.90], [2113.123, 14.30]],
+            "notes":       "100% natural abundance; high σ_th; same product as Fe-56(n,p) — Mn-56 activity dominated by this in thermal flux",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Mn-54",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.6868},
+            },
+            "threshold":   10.24,
+            "t_half":      "312.20 d",
+            "t_half_s":    2.697e7,
+            "decay_mode":  "EC",
+            "gammas":      [[834.848, 99.976]],
+            "notes":       "Near-threshold; same product as Fe-54(n,p)",
+        },
+        {
+            "reaction":    "(n,α)",
+            "product":     "V-52",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.025},
+            },
+            "threshold":   0.70,        # MeV
+            "t_half":      "3.743 min",
+            "t_half_s":    224.6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1434.08, 100.0]],
+            "notes":       "Same product as Cr-52(n,p); sigma_14 estimated; adds to V-52 in Mn-bearing steels",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # COPPER (Cu) — electrodes, transmission lines, switches in pulsed power
+    # -----------------------------------------------------------------------
+    "Cu-63": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cu-64",
+            "cross_sections": {
+                "endf8": {"sigma_th": 4.5, "sigma_2p5": 0.00533, "sigma_14": 0.0007202},
+            },
+            "threshold":   None,
+            "t_half":      "12.701 h",
+            "t_half_s":    45724.0,
+            "decay_mode":  "β⁻/EC/β⁺",
+            "gammas":      [[511.0, 35.8], [1345.77, 0.475]],
+            "notes":       "Mixed decay; 511 keV annihilation gamma from β⁺ component; dominant Cu activation at thermal flux",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Cu-62",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.4295},
+            },
+            "threshold":   11.86,
+            "t_half":      "9.673 min",
+            "t_half_s":    580.4,
+            "decay_mode":  "β⁺/EC",
+            "gammas":      [[511.0, 195.0], [1172.97, 0.342]],
+            "notes":       "Short-lived; large σ_14; 511 keV dominant from β⁺. Note: 511 keV intensity >100% because two annihilation photons per β⁺ decay",
+        },
+        {
+            "reaction":    "(n,α)",
+            "product":     "Co-60",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 1.615e-06, "sigma_14": 0.04399},
+            },
+            "threshold":   5.04,
+            "t_half":      "5.272 y",
+            "t_half_s":    1.663e8,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1173.23, 99.85], [1332.49, 99.98]],
+            "notes":       "Low cross-section but very long half-life and intense gammas; long-term dose concern",
+            "waste_class":  {"tag": "NRC Class A", "limit": "700 Ci/m³ (10 CFR 61 Table 1); IAEA clearance 0.1 Bq/g"},
+        },
+    ],
+    "Cu-65": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cu-66",
+            "cross_sections": {
+                "endf8": {"sigma_th": 2.17, "sigma_2p5": 0.003869, "sigma_14": 0.0006114},
+            },
+            "threshold":   None,
+            "t_half":      "5.120 min",
+            "t_half_s":    307.2,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1039.22, 8.71]],
+            "notes":       "Very short-lived; low-intensity gamma",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Cu-64",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.8482},
+            },
+            "threshold":   9.91,
+            "t_half":      "12.701 h",
+            "t_half_s":    45724.0,
+            "decay_mode":  "β⁻/EC/β⁺",
+            "gammas":      [[511.0, 35.8], [1345.77, 0.475]],
+            "notes":       "Largest σ_14 for Cu; same product as Cu-63(n,γ)",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Ni-65",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 6.662e-07, "sigma_14": 0.01975},
+            },
+            "threshold":   2.13,        # MeV — estimated
+            "t_half":      "2.5175 h",
+            "t_half_s":    9063.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1481.84, 23.59], [1115.54, 15.10]],
+            "notes":       "Same product as Ni-64(n,γ); sigma_14 and threshold estimated; adds to Ni-65 in Cu materials",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # TUNGSTEN (W) — some pulsed power components; electrodes, plasma-facing
+    # -----------------------------------------------------------------------
+    "W-180": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "W-181",
+            "cross_sections": {
+                "endf8": {"sigma_th": 21.7, "sigma_2p5": 0.1015, "sigma_14": 0.0007032},
+            },
+            "threshold":   None,
+            "t_half":      "121.2 d",
+            "t_half_s":    1.047e7,
+            "decay_mode":  "EC",
+            "gammas":      [],          # EC decay; primary gamma at 136.26 keV is very low intensity (<1%)
+                                        # — see ENSDF W-181 decay scheme for precise values
+            "notes":       "Large σ_th despite W-180 being only 0.12% abundant; long-lived EC product; "
+                           "gammas very weak — ENSDF needed for W-181 decay scheme; same product as W-182(n,2n)",
+        },
+    ],
+    "W-182": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "W-183",
+            "cross_sections": {
+                "endf8": {"sigma_th": 20.7, "sigma_2p5": 0.05631, "sigma_14": 0.000696},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product is stable W-183",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "W-181",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.132},
+            },
+            "threshold":   7.65,            # MeV
+            "t_half":      "121.2 d",
+            "t_half_s":    1.047e7,
+            "decay_mode":  "EC",
+            "gammas":      [],              # W-181 gammas very weak; see W-180(n,γ) notes
+            "notes":       "14 MeV threshold reaction; dominant W-181 production path at 14 MeV "
+                           "due to high W-182 abundance (26.5%); same product as W-180(n,γ)",
+        },
+    ],
+    "W-183": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "W-184",
+            "cross_sections": {
+                "endf8": {"sigma_th": 10.1, "sigma_2p5": 0.03098, "sigma_14": 0.001884},
+            },
+            "threshold":   None,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product is stable W-184",
+        },
+    ],
+    "W-184": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "W-185",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.7, "sigma_2p5": 0.03178, "sigma_14": 0.000703},
+            },
+            "threshold":   None,
+            "t_half":      "75.1 d",
+            "t_half_s":    6.489e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[125.36, 0.019]],
+            "notes":       "Long-lived; very low gamma yield (near-pure beta); dose concern",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "W-183",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.091},
+            },
+            "threshold":   7.65,
+            "t_half":      "Stable",
+            "t_half_s":    None,
+            "decay_mode":  "stable",
+            "gammas":      [],
+            "notes":       "Product stable",
+        },
+    ],
+    "W-186": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "W-187",
+            "cross_sections": {
+                "endf8": {"sigma_th": 37.9, "sigma_2p5": 0.02479, "sigma_14": 0.001366},
+            },
+            "threshold":   None,
+            "t_half":      "23.72 h",
+            "t_half_s":    85392.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[685.74, 27.3], [479.55, 21.8], [618.30, 6.3], [551.50, 5.1]],
+            "notes":       "Dominant W activation product; multiple gammas 480–690 keV range; high σ_th",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "W-185",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.031},
+            },
+            "threshold":   7.19,
+            "t_half":      "75.1 d",
+            "t_half_s":    6.489e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[125.36, 0.019]],
+            "notes":       "Same product as W-184(n,γ)",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # COBALT (Co) — 100% natural abundance Co-59; critical impurity in steel/Cu/concrete
+    # -----------------------------------------------------------------------
+    "Co-59": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Co-60",
+            "cross_sections": {
+                "endf8": {"sigma_th": 37.2, "sigma_2p5": 0.512, "sigma_14": 0.0027},
+            },
+            "threshold":   None,
+            "t_half":      "5.2714 y",
+            "t_half_s":    1.6632e8,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1173.228, 99.85], [1332.492, 99.9826]],
+            "notes":       "ENDF: σ_th=37.2 b. THE dominant long-term dose driver in activated steel, "
+                           "copper, and concrete (60–95% of external dose from SS at 2–5 y cooling per "
+                           "ORNL/TM-2020/1681). Co impurity in SS-316: 90–2570 ppm; OFHC Cu: 10–100 ppm; "
+                           "OPC concrete: 5–30 ppm. NRC Class A limit: 700 Ci/m³. "
+                           "Note: also produced via Ni-60(n,p) and Cu-63(n,α).",
+            "waste_class":  {"tag": "NRC Class A", "limit": "700 Ci/m³ (10 CFR 61 Table 1); IAEA clearance 0.1 Bq/g"},
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Co-58",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.708},
+            },
+            "threshold":   10.00,       # MeV
+            "t_half":      "70.82 d",
+            "t_half_s":    6.118e6,
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[810.759, 99.45], [1674.73, 0.517]],
+            "notes":       "ENDF: σ_14=708 mb — large fast cross-section, important 14 MeV activation product "
+                           "of Co; same product as Ni-58(n,p). Medium-term (70 d) contributor.",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Fe-59",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.017},
+            },
+            "threshold":   1.21,        # MeV
+            "t_half":      "44.495 d",
+            "t_half_s":    3.844e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1099.245, 56.5], [1291.596, 43.2]],
+            "notes":       "literature: σ_14≈17 mb (moderate confidence); Fe-59 has two strong γ lines ~1.1 "
+                           "and ~1.3 MeV",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # SODIUM (Na) — major concrete element; also produced from Al-27(n,α)
+    # -----------------------------------------------------------------------
+    "Na-23": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Na-24",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.528, "sigma_2p5": 0.000181, "sigma_14": 0.0002141},
+            },
+            "threshold":   None,
+            "t_half":      "14.9590 h",
+            "t_half_s":    53852.4,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1368.626, 99.9936], [2754.007, 99.855]],
+            "notes":       "ENDF: σ_th=0.529 b. Dominant short-term dose source in OPC concrete (0.5–1.5% "
+                           "Na₂O) and Al-containing structures. 2.754 MeV γ penetrates heavy shielding. "
+                           "Controls re-entry time after high-fluence shots (t½=15 h). "
+                           "Same product as Al-27(n,α)→Na-24 — both paths merged by physics engine.",
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Na-22",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.025},
+            },
+            "threshold":   12.63,       # MeV
+            "t_half":      "2.6019 y",
+            "t_half_s":    8.206e7,
+            "decay_mode":  "β⁺/EC",
+            "gammas":      [[1274.537, 99.94], [511.0, 181.0]],  # 511: 2× per β⁺ (90.4% β⁺ branch)
+            "notes":       "estimate: σ_14≈8.5 mb (near threshold; low confidence). Long-lived (2.6 y); "
+                           "1274 keV γ plus strong 511 annihilation. Also produced from Al-27 via multi-step "
+                           "spallation at high neutron energies.",
+            "waste_class":  {"tag": "NRC Class A", "limit": "2.5 Ci/m³ (10 CFR 61 Table 1)"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # EUROPIUM (Eu) — trace impurity dominating long-term concrete activation
+    # -----------------------------------------------------------------------
+    "Eu-151": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Eu-152",
+            "cross_sections": {
+                "endf8": {"sigma_th": 5900, "sigma_2p5": 0.1247, "sigma_14": 0.000775},
+            },
+            "threshold":   None,
+            "t_half":      "13.517 y",
+            "t_half_s":    4.264e8,
+            "decay_mode":  "EC+β⁻",    # 72% EC to Sm-152, 28% β⁻ to Gd-152
+            "gammas":      [[121.782, 28.37], [344.279, 26.57], [1408.006, 21.01],
+                            [778.904, 12.97], [1112.076, 13.67], [964.079, 14.63],
+                            [1085.837, 10.21], [244.698,  7.51]],
+            "notes":       "ENDF: σ_th≈5900 b (2200 m/s); resonance integral ~3300 b. "
+                           "literature (Kinno et al. 2007) quotes ~9200 b — likely Maxwellian avg or RI; "
+                           "flag for cross-check against JEFF-3.3. "
+                           "THE critical trace-element activation product in concrete: 0.5–2 ppm Eu in OPC "
+                           "dominates dose at 5–50 y post-shutdown. IAEA clearance: 0.1 Bq/g. "
+                           "Eu-151 is 47.81% naturally abundant.",
+            "waste_class": {"tag": "IAEA clearance", "limit": "0.1 Bq/g (IAEA RS-G-1.7 Table 1); dominant long-term concrete dose driver"},
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Eu-150",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 1.763},
+            },
+            "threshold":   6.23,        # MeV
+            "t_half":      "36.9 y",
+            "t_half_s":    1.164e9,
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[333.97, 96.4], [406.50, 2.13], [439.40, 80.0]],
+            "notes":       "estimate: σ_14≈1.5 b (low confidence — no measured value found). "
+                           "Long-lived (36.9 y); could be a significant decommissioning concern if produced "
+                           "in quantity; flag for verification against ENDF/JEFF.",
+        },
+    ],
+    "Eu-153": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Eu-154",
+            "cross_sections": {
+                "endf8": {"sigma_th": 312, "sigma_2p5": 0.09889, "sigma_14": 0.001036},
+            },
+            "threshold":   None,
+            "t_half":      "8.593 y",
+            "t_half_s":    2.712e8,
+            "decay_mode":  "β⁻",
+            "gammas":      [[123.071, 40.4], [723.305, 20.06], [1274.441, 34.97],
+                            [1004.725, 17.94], [996.262, 10.48], [873.183, 12.27],
+                            [591.755,  4.95], [756.804,  4.52]],
+            "notes":       "ENDF: σ_th=312 b. Co-produced with Eu-152 wherever Eu-151 is activated. "
+                           "Eu-153 is 52.19% naturally abundant. Eu-154 (8.6 y) adds to the 5–20 y "
+                           "dose burden alongside Eu-152. Multiple strong γ lines 100–1300 keV.",
+            "waste_class":  {"tag": "IAEA clearance", "limit": "0.2 Bq/g (IAEA RS-G-1.7 Table 1); co-produced with Eu-152 in concrete"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # CESIUM (Cs) — trace impurity in concrete (K-bearing feldspars/clays)
+    # -----------------------------------------------------------------------
+    "Cs-133": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Cs-134",
+            "cross_sections": {
+                "endf8": {"sigma_th": 29, "sigma_2p5": 0.01681, "sigma_14": 0.0009667},
+            },
+            "threshold":   None,
+            "t_half":      "2.0652 y",
+            "t_half_s":    6.512e7,
+            "decay_mode":  "β⁻",
+            "gammas":      [[604.720, 97.62], [795.860, 85.44], [569.331, 15.37],
+                            [563.243,  8.35], [1365.185, 3.02]],
+            "notes":       "ENDF: σ_th=29.0 b. Cs-133 is 100% naturally abundant. OPC concrete contains "
+                           "1–10 ppm Cs (K-bearing feldspars). Cs-134 (2.1 y) is the dominant medium-term "
+                           "concrete activation product at 2–5 y cooling. Target for LAC: Cs < 10 ppb.",
+            "waste_class":  {"tag": "NRC Class A", "limit": "1 Ci/m³ (10 CFR 61 Table 1)"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # SCANDIUM (Sc) — trace element in aggregate; rare-earth proxy for concrete quality
+    # -----------------------------------------------------------------------
+    "Sc-45": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Sc-46",
+            "cross_sections": {
+                "endf8": {"sigma_th": 27.2, "sigma_2p5": 0.001572, "sigma_14": 0.0002321},
+            },
+            "threshold":   None,
+            "t_half":      "83.790 d",
+            "t_half_s":    7.240e6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[889.277, 99.9840], [1120.545, 99.9870]],
+            "notes":       "ENDF: σ_th=27.2 b. Sc-45 is 100% naturally abundant. Scandium is a rare-earth "
+                           "proxy — used by the JAEA LAC program as an index for rare-earth contamination "
+                           "of aggregate. Andesite: 15–30 ppm Sc; fused alumina LAC: <0.2 ng/g. "
+                           "Two near-100% intensity γ lines useful as activation monitor.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # BARIUM (Ba) — matrix element of barite concrete; relevant where BaSO4 aggregate used
+    # -----------------------------------------------------------------------
+    "Ba-132": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ba-133",
+            "cross_sections": {
+                "endf8": {"sigma_th": 7, "sigma_2p5": 0.3115, "sigma_14": 0.003696},
+            },
+            "threshold":   None,
+            "t_half":      "10.511 y",
+            "t_half_s":    3.317e8,
+            "decay_mode":  "EC",
+            "gammas":      [[356.013, 62.05], [302.852, 18.33], [383.849,  8.94],
+                            [276.156,  7.16], [80.997,  34.06]],
+            "notes":       "literature: σ_th≈7.0 b (moderate confidence — Ba-132 is only 0.101% abundant; "
+                           "verify against ENDF when available). Ba-133 (10.5 y) is the DOMINANT activation "
+                           "product in barite (BaSO4) concrete — causes barite concrete to remain above "
+                           "70 Bq/g for ~10 y after reactor operation (TRIGA experiments, OSTI). "
+                           "Ba-133 EC decay produces strong 356 keV γ.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # MOLYBDENUM (Mo) — 2–3 wt% in SS-316; minor in other steels
+    # -----------------------------------------------------------------------
+    "Mo-92": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "Nb-92m",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.00117, "sigma_14": 0.1256},
+            },
+            "threshold":   2.26,        # MeV (Q ≈ −2.24 MeV; threshold = 2.24 × 93/92)
+            "t_half":      "10.15 d",
+            "t_half_s":    877000.0,    # 10.15 × 86400
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[934.44, 99.15]],
+            "notes":       "ENDF: σ_14=68 mb — well-measured dosimetry reaction. Mo-92 is 14.53% abundant "
+                           "in natural Mo. Nb-92m has a single dominant gamma at 934 keV (99.15%) — very "
+                           "clean activation signature. Relevant in SS-316 (2.5 wt% Mo) under 14 MeV flux.",
+        },
+    ],
+    "Mo-98": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mo-99",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.13, "sigma_2p5": 0.01571, "sigma_14": 0.001007},
+            },
+            "threshold":   None,
+            "t_half":      "65.94 h",
+            "t_half_s":    237384.0,    # 65.94 × 3600
+            "decay_mode":  "β⁻",
+            "gammas":      [[739.50, 12.2], [181.07, 6.1], [366.42, 1.2]],
+            "notes":       "Mo-99 is the parent of Tc-99m (t½=6.0 h, 140.5 keV 89.1%) — the medical isotope. "
+                           "Mo-98 is 24.39% naturally abundant; σ_th=0.130 b. Mo-99 decays 87.6% to Tc-99m "
+                           "(which then decays to long-lived Tc-99, t½=211,000 y — waste classification concern). "
+                           "Note: Tc-99m daughter gammas (140.5 keV) not modeled in single-step engine.",
+        },
+    ],
+    "Mo-100": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Mo-101",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.199, "sigma_2p5": 0.01024, "sigma_14": 0.001152},
+            },
+            "threshold":   None,
+            "t_half":      "14.61 min",
+            "t_half_s":    876.6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[191.92, 18.6], [590.90, 18.3], [1012.44, 11.7]],
+            "notes":       "Very short-lived (14.6 min). Mo-100 is 9.82% naturally abundant. "
+                           "Mo-101 → Tc-101 (14.22 min) → Ru-101 (stable). Short-term only.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # NIOBIUM (Nb) — critical impurity in SS from scrap contamination; also in Inconel
+    # -----------------------------------------------------------------------
+    "Nb-93": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Nb-94",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.15, "sigma_2p5": 0.0083, "sigma_14": 0.000554},
+            },
+            "threshold":   None,
+            "t_half":      "2.03×10⁴ y",
+            "t_half_s":    6.404e11,    # 20,300 y in seconds
+            "decay_mode":  "β⁻",
+            "gammas":      [[702.63, 99.97], [871.10, 99.89]],
+            "notes":       "ENDF: σ_th=1.15 b. Nb-93 is 100% naturally abundant. Nb-94 (t½=20,300 y) is the "
+                           "MOST RESTRICTIVE waste classification driver for activated SS: NRC 10 CFR 61 "
+                           "Class C limit = 0.2 Ci/m³. Exceeded Class C in Inconel X-750 reactor components "
+                           "(Springer 2023 decommissioning study). Source of Nb in SS: scrap contamination "
+                           "from Nb-stabilized grades (SS-347, Inconel). Virgin SS: <100 ppm Nb; "
+                           "commercial SS from mixed scrap: 200–3000 ppm. "
+                           "Two near-100% intensity γ lines at 703 and 871 keV make Nb-94 readily detectable.",
+            "waste_class":  {"tag": "NRC Class C", "limit": "0.2 Ci/m³ (10 CFR 61 Table 2) — most restrictive activated-metal LLW limit"},
+        },
+        {
+            "reaction":    "(n,2n)",
+            "product":     "Nb-92m",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 1.359},
+            },
+            "threshold":   8.74,        # MeV (S_n(Nb-93) ≈ 8.67 MeV → threshold = 8.67 × 94/93)
+            "t_half":      "10.15 d",
+            "t_half_s":    877000.0,
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[934.44, 99.15]],
+            "notes":       "ENDF estimate: σ_14≈460 mb. Same product as Mo-92(n,p). Large σ_14 on 100% "
+                           "abundant Nb-93 makes this the dominant Nb-92m source at 14 MeV where Nb impurity "
+                           "is present.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # SILVER (Ag) — impurity in OFE/OFHC copper (≤25 ppm per ASTM B170 C10100)
+    # -----------------------------------------------------------------------
+    "Ag-107": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ag-108m",
+            "cross_sections": {
+                "endf8": {"sigma_th": 35, "sigma_2p5": 0.06437, "sigma_14": 7.778e-05},
+            },
+            "threshold":   None,
+            "t_half":      "438 y",
+            "t_half_s":    1.382e10,    # 438 × 3.156e7
+            "decay_mode":  "EC/IT",
+            "gammas":      [[434.00, 90.7], [614.28, 89.8], [722.91, 91.0], [879.35, 73.4]],
+            "notes":       "ENDF: σ_th(→Ag-108m) ≈ 35 b (93% isomeric fraction of total σ_th=37.6 b). "
+                           "Ag-107 is 51.84% naturally abundant. Ag-108m (t½=438 y) is an EXTREMELY LONG-LIVED "
+                           "activation product — waste classification concern for OFE/OFHC copper over decades "
+                           "of operation. ASTM B170 C10100 allows Ag ≤25 ppm max: at 25 ppm Ag, "
+                           "f_Ag107 ≈ 7.6×10⁻⁶, σ·f ≈ 2.7×10⁻⁴ b. "
+                           "Four strong gammas (434–879 keV) make Ag-108m readily identifiable by HPGe. "
+                           "OFTEN OVERLOOKED in copper activation analyses.",
+        },
+    ],
+    "Ag-109": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ag-110m",
+            "cross_sections": {
+                "endf8": {"sigma_th": 4.12, "sigma_2p5": 0.03602, "sigma_14": 0.000865},
+            },
+            "threshold":   None,
+            "t_half":      "249.83 d",
+            "t_half_s":    2.159e7,     # 249.83 × 86400
+            "decay_mode":  "β⁻/IT",
+            "gammas":      [[657.76, 94.7], [884.68, 72.7], [937.49, 34.3],
+                            [763.94, 22.3], [1384.29, 24.3], [706.68, 16.7],
+                            [1505.04, 13.1], [677.62, 10.3]],
+            "notes":       "Measured: σ_th(→Ag-110m) = 4.12±0.10 b (Tanaka et al. 2003; DOI 10.1080/18811248.2003.9715341). "
+                           "Resonance integral (→Ag-110m) = 67.9±3.1 b — large RI relative to σ_th. "
+                           "Ag-109 is 48.16% naturally abundant. "
+                           "Ag-110m is the PRIMARY medium-term dose driver in OFE/OFHC copper under "
+                           "thermal flux conditions: at 25 ppm Ag (ASTM B170 C10100 max), "
+                           "σ·f_th ≈ 3.2×10⁻⁵ b — EXCEEDS Zn-65 by ~85× at the ASTM impurity limits. "
+                           "Multiple intense gammas 658–938 keV make Ag-110m a strong dose contributor. "
+                           "Commonly absent from copper activation analyses despite being the dominant "
+                           "medium-term contributor. Literature: routinely appears in reactor decommissioning "
+                           "activated-metal radionuclide lists (OSTI 10170334).",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # TANTALUM (Ta) — impurity in pure W; also in some W alloys
+    # -----------------------------------------------------------------------
+    "Ta-181": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ta-182",
+            "cross_sections": {
+                "endf8": {"sigma_th": 20.5, "sigma_2p5": 0.07592, "sigma_14": 0.001173},
+            },
+            "threshold":   None,
+            "t_half":      "114.74 d",
+            "t_half_s":    9913000.0,   # 114.74 × 86400
+            "decay_mode":  "β⁻",
+            "gammas":      [[1221.41, 27.3], [1231.02, 11.6], [68.41, 34.7],
+                            [100.11, 14.2], [1189.05, 16.5]],
+            "notes":       "ENDF: σ_th=20.5 b. Ta-181 is 99.988% naturally abundant (essentially monoisotopic). "
+                           "Ta impurity in pure W: ITER specification ≤50 ppm (typical); industrial W: up to 500 ppm. "
+                           "Ta-182 (t½=114.7 d) dominates medium-term dose in W components after W-187 (23.9 h) "
+                           "has decayed. At 50 ppm Ta: f_Ta181 ≈ 5.1×10⁻⁵, σ·f_th ≈ 0.00104 b. "
+                           "Ta is present in W from co-processing (Ta and W frequently co-extracted from ore). "
+                           "Some W alloys (W-La₂O₃, ODS-W) may have higher Ta from raw material impurities.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # ZINC (Zn) — impurity in OFHC copper (~10–100 ppm); also in fly-ash concrete
+    # -----------------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # TITANIUM (Ti) — Ti-6Al-4V alloying element; reduced-activation material
+    # -----------------------------------------------------------------------
+    "Ti-47": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "Sc-47",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.02052, "sigma_14": 0.145},
+            },
+            "threshold":   0.60,
+            "t_half":      "3.349 d",
+            "t_half_s":    289354.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[159.381, 68.3]],
+            "notes":       "Fast/14 MeV reaction. Sc-47 is the primary dose driver in Ti-6Al-4V "
+                           "at 1–5 d cooling. Ti-47 = 7.44% of natural Ti.",
+        },
+    ],
+    "Ti-48": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "Sc-48",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.05927},
+            },
+            "threshold":   2.43,
+            "t_half":      "43.67 h",
+            "t_half_s":    157212.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[983.52, 100.0], [1037.52, 97.6], [1312.12, 100.0]],
+            "notes":       "Hard gammas 984/1038/1312 keV. Ti-48 is 73.72% of natural Ti — "
+                           "significant production despite modest σ_14. Sc-48 is an important "
+                           "early dose driver in Ti-6Al-4V at 14 MeV.",
+        },
+    ],
+    "Ti-50": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ti-51",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.179, "sigma_2p5": 0.0003906, "sigma_14": 0.0007147},
+            },
+            "threshold":   None,
+            "t_half":      "5.76 min",
+            "t_half_s":    345.6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[319.68, 93.1], [928.87, 7.3]],
+            "notes":       "Short-lived; relevant only for prompt post-shutdown dose.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # VANADIUM (V) — alloying element in EUROFER97 (0.2 wt%) and Ti-6Al-4V (4 wt%)
+    # -----------------------------------------------------------------------
+    "V-51": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "V-52",
+            "cross_sections": {
+                "endf8": {"sigma_th": 4.9, "sigma_2p5": 0.001467, "sigma_14": 0.0006509},
+            },
+            "threshold":   None,
+            "t_half":      "3.743 min",
+            "t_half_s":    224.6,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1434.06, 100.0]],
+            "notes":       "V-51 = 99.750% of natural V. Very short-lived; prompt dose only. "
+                           "High σ_th but V present at only 0.2 wt% (EUROFER97) or 4 wt% (Ti-6Al-4V).",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # OXYGEN (O) — concrete, water, SiO2 and all oxide-bearing materials
+    # -----------------------------------------------------------------------
+    "O-16": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "N-16",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.04272},
+            },
+            "threshold":   9.64,
+            "t_half":      "7.13 s",
+            "t_half_s":    7.13,
+            "decay_mode":  "β⁻",
+            "gammas":      [[6128.62, 67.0], [7115.15, 4.9]],
+            "notes":       "DOMINANT prompt gamma source in water and concrete under 14 MeV flux. "
+                           "6.13/7.12 MeV gammas are extremely penetrating — set online dose rates "
+                           "in water-cooled systems. Gone within ~1 min of shutdown. "
+                           "Irrelevant for decay dose calculations but critical for runtime estimates.",
+        },
+    ],
+    "O-17": [
+        {
+            "reaction":    "(n,α)",
+            "product":     "C-14",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.235, "sigma_2p5": 0.1174, "sigma_14": 0.2608},
+            },
+            "threshold":   None,
+            "t_half":      "5730 y",
+            "t_half_s":    1.808e11,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "Pure beta emitter (Emax=156 keV); zero external gamma dose. "
+                           "Long-term LLW waste concern: 10 CFR 61 Class B C-14 limit = 80 Ci/m³. "
+                           "O-17 = 0.038% of natural O; σ_th=0.235 b — cumulative C-14 "
+                           "production is significant in high-fluence water and concrete.",
+            "waste_class":  {"tag": "NRC Class C", "limit": "8 Ci/m³ (10 CFR 61 Table 2); pure β — key LLW concern for concrete, WC, polymers"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # CALCIUM (Ca) — major element in concrete (~15 wt% OPC, ~31 wt% limestone)
+    # -----------------------------------------------------------------------
+    "Ca-48": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Ca-49",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.09, "sigma_2p5": 0.0002372, "sigma_14": 0.0008658},
+            },
+            "threshold":   None,
+            "t_half":      "8.718 min",
+            "t_half_s":    523.1,
+            "decay_mode":  "β⁻",
+            "gammas":      [[3084.54, 92.1], [4071.87, 7.3]],
+            "notes":       "Very high energy gammas (3.1 and 4.1 MeV) but very short-lived. "
+                           "Ca-48 = 0.187% of natural Ca; σ_th=1.09 b. Contributes to early "
+                           "shutdown dose in concrete; larger relative contribution in LAC due to "
+                           "higher total Ca content.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # POTASSIUM (K) — cement mineral (~1.9 wt% OPC, ~0.2 wt% LAC)
+    # -----------------------------------------------------------------------
+    "K-41": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "K-42",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.5155, "sigma_2p5": 0.001758, "sigma_14": 9.504e-06},
+            },
+            "threshold":   None,
+            "t_half":      "12.360 h",
+            "t_half_s":    44496.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1524.64, 18.1]],
+            "notes":       "K-41 = 6.730% of natural K. K-42 (12.4 h, 1525 keV at 18%) — "
+                           "moderate early shutdown dose contributor in OPC concrete.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # NITROGEN (N) — trace in WC feedstock, Kretekast concrete, Ti alloys
+    # -----------------------------------------------------------------------
+    "N-14": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "C-14",
+            "cross_sections": {
+                "endf8": {"sigma_th": 1.827, "sigma_2p5": 0.01655, "sigma_14": 0.04389},
+            },
+            "threshold":   None,        # exothermic
+            "t_half":      "5730 y",
+            "t_half_s":    1.808e11,
+            "decay_mode":  "β⁻",
+            "gammas":      [],
+            "notes":       "Pure beta emitter; zero external gamma dose. "
+                           "CRITICAL LLW waste concern: 10 CFR 61 Class B C-14 limit = 80 Ci/m³. "
+                           "N-14(n,p) is the dominant C-14 route in WC feedstock (50–200 ppm N), "
+                           "polymer shielding, and concrete. N-14 σ_th=1.83 b is large.",
+            "waste_class":  {"tag": "NRC Class C", "limit": "8 Ci/m³ (10 CFR 61 Table 2); pure β — key LLW concern for concrete, WC, polymers"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # SILICON (Si) — in concrete, SS baseline, Al-6061, SiO2
+    # -----------------------------------------------------------------------
+    "Si-28": [
+        {
+            "reaction":    "(n,p)",
+            "product":     "Al-28",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.2773},
+            },
+            "threshold":   3.86,
+            "t_half":      "2.245 min",
+            "t_half_s":    134.7,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1778.99, 100.0]],
+            "notes":       "Fast flux only. Al-28 also produced by Al-27(n,γ); physics engine "
+                           "merges contributions. Short-lived; prompt dose only.",
+        },
+    ],
+    "Si-30": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Si-31",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.107, "sigma_2p5": 0.0008563, "sigma_14": 0.000605},
+            },
+            "threshold":   None,
+            "t_half":      "157.3 min",
+            "t_half_s":    9438.0,
+            "decay_mode":  "β⁻",
+            "gammas":      [[1266.2, 0.07]],
+            "notes":       "Si-31 is 99.93% a pure beta emitter (Emax=1492 keV). The 1266 keV "
+                           "gamma has only 0.07% intensity — dose contribution negligible. "
+                           "Included for completeness.",
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # BISMUTH (Bi) — impurity in lead shielding
+    # -----------------------------------------------------------------------
+    "Bi-209": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Bi-210",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.0338, "sigma_2p5": 0.00329, "sigma_14": 0.00102},
+            },
+            "threshold":   None,
+            "t_half":      "5.012 d",
+            "t_half_s":    433037.0,
+            "decay_mode":  "β⁻ → Po-210",
+            "gammas":      [],
+            "notes":       "Bi-210 is a pure β emitter; decays to Po-210 (t½=138 d, 5.304 MeV α). "
+                           "Po-210 is NOT a gamma emitter but is an EXTREME radiotoxic inhalation "
+                           "hazard (ICRP DC: 2.4e-6 Sv/Bq ingestion). Nuclear-grade Pb specifies "
+                           "Bi < 10 ppm. Commercial Pb: 10–10,000 ppm Bi → activated Pb requires "
+                           "monitoring for Po-210 alpha hazard.",
+            "waste_class":  {"tag": "Alpha hazard", "limit": "→ Po-210 α emitter; ICRP-60 inhalation radiotoxin; no gamma waste class — alpha intake limit applies"},
+        },
+    ],
+
+    # -----------------------------------------------------------------------
+    # ZINC (Zn) — impurity in OFHC copper (~10–100 ppm); also in fly-ash concrete
+    # -----------------------------------------------------------------------
+    "Zn-64": [
+        {
+            "reaction":    "(n,γ)",
+            "product":     "Zn-65",
+            "cross_sections": {
+                "endf8": {"sigma_th": 0.793, "sigma_2p5": 0.006743, "sigma_14": 0.0009949},
+            },
+            "threshold":   None,
+            "t_half":      "243.93 d",
+            "t_half_s":    2.108e7,
+            "decay_mode":  "EC/β⁺",
+            "gammas":      [[1115.539, 50.60], [511.0, 6.96]],  # 511: annihilation, ~3.48% β⁺ branch × 2
+            "notes":       "ENDF: σ_th=0.793 b. Zn-64 is 48.6% naturally abundant. "
+                           "Zn in OFE copper (ASTM B170 C10100): ≤1 ppm max — at this level Zn-65 is "
+                           "DOMINATED by Ag-110m (see Ag-109 entry). For commercial OFHC/C10200 Cu with "
+                           "10–50 ppm Zn, Zn-65 becomes comparable to Ag-110m. For Al-7075 (5–6 wt% Zn), "
+                           "Zn-65 is the dominant medium-term dose concern. Also activated in fly-ash concrete. "
+                           "Correction vs earlier note: C10100 Zn limit is 1 ppm, not 10–100 ppm.",
+        },
+        {
+            "reaction":    "(n,p)",
+            "product":     "Cu-64",
+            "cross_sections": {
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.02594, "sigma_14": 0.1709},
+            },
+            "threshold":   2.37,        # MeV
+            "t_half":      "12.701 h",
+            "t_half_s":    45723.6,
+            "decay_mode":  "EC/β⁺/β⁻",
+            "gammas":      [[1345.77, 0.473], [511.0, 35.2]],
+            "notes":       "estimate: σ_14≈52 mb. Cu-64 also produced by Cu-63(n,γ). Short-lived (12.7 h); "
+                           "same product; merged by physics engine.",
+        },
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Material definitions — isotopic compositions (atom fraction)
+# ---------------------------------------------------------------------------
+
+MATERIALS = {
+
+    # ------------------------------------------------------------------
+    # Alloys
+    # ------------------------------------------------------------------
+    "Stainless Steel 304 (baseline)": {
+        "category":    "steel",
+        "description": "AISI 304 stainless steel — bulk composition only, no impurities modeled. "
+                       "Nominal: 72 wt% Fe, 18 wt% Cr, 8 wt% Ni, 2 wt% Mn. Minor spec constituents "
+                       "C (≤0.08 wt%), Si (≤1.0 wt%), P (≤0.045 wt%), S (≤0.030 wt%) included. "
+                       "Use this as a clean lower-bound reference. For realistic activation including "
+                       "Co-60 (dominant long-term dose driver), use 'Stainless Steel 304' instead.",
+        "impurities": {},
+        "density_g_cc": 7.93,
+        "isotopes": {
+            # Iron (72 wt% → 70.88 atom%)
+            "Fe-54": 0.04168, "Fe-56": 0.65424, "Fe-57": 0.01511, "Fe-58": 0.00201,
+            # Chromium (18 wt% → 19.03 atom%)
+            "Cr-50": 0.00833, "Cr-52": 0.16054, "Cr-53": 0.01821, "Cr-54": 0.00453,
+            # Nickel (8 wt% → 7.47 atom%)
+            "Ni-58": 0.05129, "Ni-60": 0.01975, "Ni-61": 0.00086, "Ni-62": 0.00274, "Ni-64": 0.00070,
+            # Manganese (2 wt% → 2.00 atom%; 100% Mn-55)
+            "Mn-55": 0.02015,
+            # Carbon (≤0.08 wt% → ~0.36 atom%; 98.9% C-12)
+            "C-12": 0.00363, "C-13": 0.00004,
+            # Silicon (≤1.0 wt% → ~1.96 atom%; natural isotopics)
+            "Si-28": 0.01817, "Si-29": 0.00092, "Si-30": 0.00061,
+            # Phosphorus (≤0.045 wt% → ~0.080 atom%; 100% P-31)
+            "P-31": 0.00079,
+            # Sulfur (≤0.030 wt% → ~0.051 atom%; natural isotopics, dominated by S-32)
+            "S-32": 0.00049, "S-33": 0.00000, "S-34": 0.00003,
+        },
+    },
+    "Stainless Steel 304": {
+        "category":    "steel",
+        "description": "AISI 304 stainless steel — commercial grade with typical Co impurity (~1500 ppm). "
+                       "Nominal: 72 wt% Fe, 18 wt% Cr, 8 wt% Ni, 2 wt% Mn + Co-59 at 1500 ppm. "
+                       "Atom fractions from wt% → atom% conversion (AME2020/IUPAC 2021). "
+                       "Co impurity modeled explicitly — critical for meaningful long-term dose estimates. "
+                       "For nuclear-grade low-Co SS, use SS-316 (nuclear grade) entry.",
+        "impurities": {
+            "Co": {"ppm_range": [90, 2570], "significance": "CRITICAL",
+                   "note": "Co-59(n,γ)→Co-60 (t½=5.27 y) is the #1 long-term dose driver in SS — "
+                           "contributes 60–95% of external dose at 2–5 y cooling (ORNL/TM-2020/1681). "
+                           "Modeled in isotopes at ~1500 ppm (commercial); see SS-316 variants for alternatives."},
+            "Mo": {"ppm_range": [None, 7500], "significance": "moderate",
+                   "note": "SS-304 may contain up to ~0.75 wt% Mo (residual from some alloys). "
+                           "Mo-98(n,γ)→Mo-99 (66 h, medium γ) and Mo-92(n,p)→Nb-92m are relevant. "
+                           "Long-lived Tc-99 (t½=211 ky) from Mo-99 decay chain — low-level waste concern."},
+            "Nb": {"ppm_range": [None, 200], "significance": "high",
+                   "note": "Nb-93(n,γ)→Nb-94 (t½=20,300 y): NRC Class C limit = 0.2 Ci/m³ — "
+                           "most restrictive activated-metal waste limit. Enters via scrap from SS-347/Inconel. "
+                           "Commercial SS can have up to 3000 ppm Nb from mixed scrap."},
+        },
+        "density_g_cc": 7.93,
+        "isotopes": {
+            # Iron (72 wt% → ~70.8 atom% after Co adjustment)
+            "Fe-54": 0.04168,
+            "Fe-56": 0.65424,
+            "Fe-57": 0.01511,
+            "Fe-58": 0.00201,
+            # Chromium (18 wt% → 19.0 atom%)
+            "Cr-50": 0.00832,
+            "Cr-52": 0.16042,
+            "Cr-53": 0.01819,
+            "Cr-54": 0.00453,
+            # Nickel (8 wt% → 7.5 atom%; all 5 stable isotopes)
+            "Ni-58": 0.05132,
+            "Ni-60": 0.01977,
+            "Ni-61": 0.00086,
+            "Ni-62": 0.00274,
+            "Ni-64": 0.00070,
+            # Manganese (2 wt% → 2.0 atom%; Mn-55 = 100% natural abundance)
+            "Mn-55": 0.02013,
+            # Cobalt impurity — CRITICAL: modeled at ~1500 ppm (commercial SS-304)
+            # f_Co59 ≈ 0.0015/58.933 / (sum_of_all_moles) ≈ 1.40×10⁻³
+            # (sum ≈ 0.018079 mol/g → f_Co59 = 2.546e-5/0.018079 ≈ 1.41e-3)
+            "Co-59": 0.00141,
+        },
+    },
+    "Stainless Steel 316 (commercial)": {
+        "category":    "steel",
+        "description": "AISI 316 stainless steel — commercial grade. Nominal: 65 wt% Fe, 17 wt% Cr, "
+                       "12 wt% Ni, 2.5 wt% Mo, 2 wt% Mn + Co at ~1500 ppm + Nb at ~50 ppm. "
+                       "Mo addition (cf. SS-304) provides pitting corrosion resistance. "
+                       "Co-59 modeled explicitly at commercial typical level (~1500 ppm). "
+                       "For comparison with nuclear-grade, see SS-316 (nuclear grade) entry. "
+                       "Atom fractions: wt% → atom% (AME2020/IUPAC 2021).",
+        "impurities": {
+            "Co": {"ppm_range": [90, 2570], "significance": "CRITICAL",
+                   "note": "Modeled explicitly in isotopes at 1500 ppm. Co-60 dominates long-term dose. "
+                           "VTT-R-00184-20: measured 1340–1630 ppm in commercial SS-316 lots."},
+            "Nb": {"ppm_range": [None, 3000], "significance": "high",
+                   "note": "Nb-94 waste classification driver (NRC Class C 0.2 Ci/m³). "
+                           "Modeled at 50 ppm (typical virgin SS-316); commercial scrap-based SS: up to 3000 ppm."},
+        },
+        "density_g_cc": 7.98,
+        "isotopes": {
+            # Iron (65 wt% → 66.1 atom%)
+            "Fe-54": 0.03863,
+            "Fe-56": 0.60614,
+            "Fe-57": 0.01400,
+            "Fe-58": 0.00186,
+            # Chromium (17 wt% → 18.6 atom%)
+            "Cr-50": 0.00807,
+            "Cr-52": 0.15555,
+            "Cr-53": 0.01764,
+            "Cr-54": 0.00439,
+            # Nickel (12 wt% → 11.6 atom%)
+            "Ni-58": 0.07901,
+            "Ni-60": 0.03042,
+            "Ni-61": 0.00132,
+            "Ni-62": 0.00422,
+            "Ni-64": 0.00107,
+            # Molybdenum (2.5 wt% → 1.48 atom%)
+            "Mo-92": 0.00215,
+            "Mo-94": 0.00136,
+            "Mo-95": 0.00234,
+            "Mo-96": 0.00246,
+            "Mo-97": 0.00142,
+            "Mo-98": 0.00361,
+            "Mo-100": 0.00145,
+            # Manganese (2 wt% → 2.07 atom%)
+            "Mn-55": 0.02066,
+            # Cobalt — CRITICAL impurity modeled at 1500 ppm (commercial grade)
+            # f_Co59 ≈ 1.45×10⁻³ (from wt% → atom% calculation)
+            "Co-59": 0.00145,
+            # Niobium — impurity modeled at 50 ppm (typical virgin SS-316)
+            # f_Nb93 ≈ 3.1×10⁻⁵
+            "Nb-93": 0.0000307,
+        },
+    },
+    "Stainless Steel 316 (nuclear grade)": {
+        "category":    "steel",
+        "description": "AISI 316 stainless steel — nuclear/low-Co grade. Identical bulk composition to "
+                       "SS-316 (commercial) but Co ≤100 ppm (Sandmeyer 304CO-type specification; "
+                       "special melt practices, scrap-free raw Ni). Nb modeled at 20 ppm (scrap-free melt). "
+                       "Demonstrates the large reduction in long-term dose achievable through material selection. "
+                       "References: Sandmeyer Steel 304CO spec (≤500 ppm Co); EPRI TR-112352 (low-Co practices).",
+        "impurities": {
+            "Co": {"ppm_range": [20, 100], "significance": "CRITICAL — but controlled",
+                   "note": "Co ≤100 ppm in nuclear grade vs 90–2570 ppm commercial. At 100 ppm, "
+                           "Co-60 production is ~15× lower than at 1500 ppm — dramatically extends maintenance "
+                           "access windows and reduces waste classification concerns."},
+            "Nb": {"ppm_range": [None, 50], "significance": "moderate",
+                   "note": "Nb-94 concern still present but at much lower levels for scrap-free material. "
+                           "Verify Nb content analytically if Class C compliance is required."},
+        },
+        "density_g_cc": 7.98,
+        "isotopes": {
+            # Fe, Cr, Ni, Mo, Mn — identical to SS-316 (commercial)
+            "Fe-54": 0.03863,
+            "Fe-56": 0.60614,
+            "Fe-57": 0.01400,
+            "Fe-58": 0.00186,
+            "Cr-50": 0.00807,
+            "Cr-52": 0.15555,
+            "Cr-53": 0.01764,
+            "Cr-54": 0.00439,
+            "Ni-58": 0.07901,
+            "Ni-60": 0.03042,
+            "Ni-61": 0.00132,
+            "Ni-62": 0.00422,
+            "Ni-64": 0.00107,
+            "Mo-92": 0.00215,
+            "Mo-94": 0.00136,
+            "Mo-95": 0.00234,
+            "Mo-96": 0.00246,
+            "Mo-97": 0.00142,
+            "Mo-98": 0.00361,
+            "Mo-100": 0.00145,
+            "Mn-55": 0.02066,
+            # Cobalt — nuclear grade: ≤100 ppm
+            # f_Co59 ≈ 9.6×10⁻⁵
+            "Co-59": 0.0000960,
+            # Niobium — scrap-free melt: ~20 ppm
+            # f_Nb93 ≈ 1.2×10⁻⁵
+            "Nb-93": 0.0000122,
+        },
+    },
+    "Carbon Steel (A36)": {
+        "category":    "steel",
+        "description": "ASTM A36 structural carbon steel. Nominal: 98.5 wt% Fe, 1.5 wt% Mn (C/Si traces not "
+                       "modeled). Atom fractions from wt% → atom% conversion. Sum = 1.",
+        "impurities": {
+            "Co": {"ppm_range": [93, 151], "significance": "high",
+                   "note": "Co-59(n,γ)→Co-60 long-term dose driver; lower Co than SS-316 (~150 ppm typical "
+                           "vs up to 2570 ppm) but still significant for long-term waste classification."},
+        },
+        "density_g_cc": 7.85,
+        "isotopes": {
+            # Iron (98.5 wt% → 98.48 atom%)
+            "Fe-54": 0.05756,
+            "Fe-56": 0.90355,
+            "Fe-57": 0.02087,
+            "Fe-58": 0.00278,
+            # Manganese (1.5 wt% → 1.52 atom%)
+            "Mn-55": 0.01524,
+        },
+    },
+
+    # ------------------------------------------------------------------
+    # Pure elements
+    # ------------------------------------------------------------------
+    "Aluminum (pure)": {
+        "category":    "metal",
+        "description": "Pure aluminum (commercially pure / 1100 series). Natural abundance Al-27 = 100%.",
+        "impurities": {
+            "Na": {"ppm_range": [None, 500], "significance": "moderate",
+                   "note": "Na impurity → Na-24 (t½=15 h) additional to dominant Al-27(n,α)→Na-24 path. "
+                           "High-purity (6N) Al substantially reduces long-lived trace activation."},
+            "Cu": {"ppm_range": [None, None], "significance": "low-moderate",
+                   "note": "Cu impurity in 1100-series Al (~0.05–0.2 wt%) → Cu-64 (short-lived) and "
+                           "via Zn impurity → Zn-65. Negligible vs. matrix activation for typical applications."},
+        },
+        "density_g_cc": 2.70,
+        "isotopes": {
+            "Al-27": 1.0000,
+        },
+    },
+    "Copper (OFHC)": {
+        "category":    "metal",
+        "description": "Oxygen-free high-conductivity copper — C10100/OFE grade (ASTM B170). Used in pulsed "
+                       "power transmission lines, electrodes, and switches. Cu isotopics (IUPAC 2021) plus "
+                       "Ag-107/Ag-109 modeled at ASTM B170 C10100 maximum (25 ppm total Ag). "
+                       "WARNING: Ag-110m from Ag-109 is the PRIMARY medium-term dose driver in OFE Cu under "
+                       "thermal flux — NOT Zn-65. Zn ≤1 ppm in C10100; Ag ≤25 ppm. "
+                       "Ag-108m (438 y) from Ag-107 is a long-lived waste classification concern.",
+        "impurities": {
+            "Ag": {"ppm_range": [None, 25], "significance": "CRITICAL — primary medium-term driver",
+                   "note": "ASTM B170 C10100: Ag ≤25 ppm max. Ag-110m (249.8 d) from Ag-109(n,γ) dominates "
+                           "medium-term dose; Ag-108m (438 y) from Ag-107(n,γ) is a waste classification "
+                           "concern. Ag-110m σ·f_th EXCEEDS Zn-65 by ~85× at C10100 specification limits. "
+                           "Ag modeled explicitly in isotopes at 25 ppm (worst-case C10100)."},
+            "Zn": {"ppm_range": [None, 1], "significance": "low for C10100; high for commercial Cu",
+                   "note": "ASTM B170 C10100: Zn ≤1 ppm (negligible). For C10200 or commercial OFHC: "
+                           "Zn can be 10–100 ppm → Zn-65 becomes significant. "
+                           "Al-7075 (5–6% Zn): Zn-65 is dominant medium-term concern."},
+            "Co": {"ppm_range": [None, 5], "significance": "moderate",
+                   "note": "Not limited in ASTM B170 but typically <5 ppm in electrolytic Cu. "
+                           "At 5 ppm: Co-60 contributes comparably to Ag-110m at long cooling times."},
+            "Ni": {"ppm_range": [None, 10], "significance": "low-moderate",
+                   "note": "ASTM B170 C10100: Ni ≤10 ppm. Ni-63 (t½=100 y) — long-lived waste concern."},
+        },
+        "density_g_cc": 8.96,
+        "isotopes": {
+            # Bulk Cu isotopics (IUPAC 2021)
+            "Cu-63": 0.6917,
+            "Cu-65": 0.3083,
+            # Silver impurity — modeled at ASTM B170 C10100 max: 25 ppm Ag total
+            # f_Ag107 ≈ (25e-6 × 0.5184 / 107.868) / (1/63.546) = 7.63e-6
+            # f_Ag109 ≈ (25e-6 × 0.4816 / 108.905) / (1/63.546) = 7.07e-6
+            "Ag-107": 0.00000763,
+            "Ag-109": 0.00000707,
+        },
+    },
+    "Tungsten (ITER grade)": {
+        "category":    "metal",
+        "description": "Pure tungsten — ITER specification grade. Used in pulsed power electrodes and "
+                       "plasma-facing components. Natural W isotopics (IUPAC 2021) + Ta-181 and Co-59 "
+                       "modeled at ITER maximum specification levels (Ta ≤50 ppm, Co ≤5 ppm). "
+                       "W→Re→Os transmutation chain is intrinsic but requires multi-step model (Phase 4). "
+                       "References: Rieth et al. (2015), ScienceDirect, ITER W specification.",
+        "impurities": {
+            "Re": {"ppm_range": [None, None], "significance": "intrinsic",
+                   "note": "W→Re→Os transmutation chain is INTRINSIC to W in a DT neutron field. "
+                           "Not a trace-element impurity — occurs in pure W. Re-186 (t½=3.72 d) dominates "
+                           "short-term; W-187 (t½=23.9 h) is immediate product. "
+                           "ITER DEMO: 0.2 at.% Re after 14 y operation. "
+                           "Multi-step chain model needed (Phase 4 work)."},
+            "Ta": {"ppm_range": [None, 50], "significance": "moderate — medium-term dose",
+                   "note": "ITER spec: Ta ≤50 ppm. Ta-181(n,γ)→Ta-182 (t½=114.7 d) modeled explicitly. "
+                           "Industrial W: up to 500 ppm Ta from co-processing. "
+                           "At 50 ppm: σ·f_th ≈ 1.0×10⁻³ b — medium-term contributor after W-187 decays."},
+            "Co": {"ppm_range": [None, 5], "significance": "moderate — long-term dose",
+                   "note": "ITER spec: Co ≤5 ppm (typical <1 ppm). Co-59(n,γ)→Co-60 modeled explicitly. "
+                           "At 5 ppm: f_Co59 ≈ 1.56×10⁻⁵, σ·f_th ≈ 5.8×10⁻⁴ b — visible at year-scale "
+                           "cooling when bulk W activation has decayed."},
+        },
+        "density_g_cc": 19.30,
+        "isotopes": {
+            # Bulk W isotopics (IUPAC 2021)
+            "W-180": 0.0012,
+            "W-182": 0.2650,
+            "W-183": 0.1431,
+            "W-184": 0.3064,
+            "W-186": 0.2843,
+            # Tantalum impurity at ITER spec max (50 ppm)
+            # f_Ta181 ≈ (50e-6 / 180.948) / (1/183.84) ≈ 5.08×10⁻⁵
+            "Ta-181": 0.0000508,
+            # Cobalt impurity at ITER spec max (5 ppm)
+            # f_Co59 ≈ (5e-6 / 58.933) / (1/183.84) ≈ 1.56×10⁻⁵
+            "Co-59": 0.0000156,
+        },
+    },
+    "Tungsten (industrial)": {
+        "category":    "metal",
+        "description": "Pure tungsten — industrial/commercial grade (not fusion-spec). "
+                       "Ta modeled at 300 ppm, Co at 30 ppm (typical industrial range). "
+                       "Use for comparison with ITER-grade W to demonstrate impurity sensitivity. "
+                       "Natural W isotopics (IUPAC 2021).",
+        "impurities": {
+            "Ta": {"ppm_range": [50, 500], "significance": "high",
+                   "note": "Industrial W: 50–500 ppm Ta from ore co-processing. "
+                           "At 300 ppm Ta: σ·f_th ≈ 6.2×10⁻³ b — significant medium-term contributor."},
+            "Co": {"ppm_range": [5, 100], "significance": "moderate",
+                   "note": "Industrial W: up to 100 ppm Co from processing. "
+                           "Co-60 accumulation non-trivial for long-term dose in W components."},
+        },
+        "density_g_cc": 19.30,
+        "isotopes": {
+            "W-180": 0.0012,
+            "W-182": 0.2650,
+            "W-183": 0.1431,
+            "W-184": 0.3064,
+            "W-186": 0.2843,
+            # Tantalum impurity at industrial grade (~300 ppm)
+            # f_Ta181 ≈ (300e-6 / 180.948) / (1/183.84) ≈ 3.05×10⁻⁴
+            "Ta-181": 0.000305,
+            # Cobalt impurity at ~30 ppm (mid-range industrial)
+            # f_Co59 ≈ (30e-6 / 58.933) / (1/183.84) ≈ 9.36×10⁻⁵
+            "Co-59": 0.0000936,
+        },
+    },
+    "Iron (natural)": {
+        "category":    "element",
+        "description": "Natural iron. All four stable isotopes at IUPAC 2021 atom fractions. "
+                       "Reference case for steel activation interpretation.",
+        "impurities":  {},
+        "density_g_cc": 7.874,
+        "isotopes": {
+            "Fe-54": 0.05845,
+            "Fe-56": 0.91754,
+            "Fe-57": 0.02119,
+            "Fe-58": 0.00282,
+        },
+    },
+    "Chromium (natural)": {
+        "category":    "element",
+        "description": "Natural chromium. All four stable isotopes at IUPAC 2021 atom fractions. "
+                       "Reference case for steel/SS activation interpretation.",
+        "impurities":  {},
+        "density_g_cc": 7.19,
+        "isotopes": {
+            "Cr-50": 0.04345,
+            "Cr-52": 0.83789,
+            "Cr-53": 0.09501,
+            "Cr-54": 0.02365,
+        },
+    },
+    "Nickel (natural)": {
+        "category":    "element",
+        "description": "Natural nickel. All five stable isotopes at IUPAC 2021 atom fractions. "
+                       "Useful for Co-60 production studies in SS304.",
+        "impurities":  {},
+        "density_g_cc": 8.908,
+        "isotopes": {
+            "Ni-58": 0.68077,
+            "Ni-60": 0.26223,
+            "Ni-61": 0.01140,
+            "Ni-62": 0.03634,
+            "Ni-64": 0.00926,
+        },
+    },
+    "Manganese (natural)": {
+        "category":    "element",
+        "description": "Natural manganese. Mn-55 is 100% naturally abundant (monoisotopic element). "
+                       "Reference case for Mn-56 activation.",
+        "impurities":  {},
+        "density_g_cc": 7.21,
+        "isotopes": {
+            "Mn-55": 1.0000,
+        },
+    },
+
+    # ------------------------------------------------------------------
+    # Phase 3 additions — new structural / shielding materials
+    # ------------------------------------------------------------------
+
+    "EUROFER97": {
+        "category":    "steel",
+        "description": "EUROFER97 reduced-activation ferritic-martensitic (RAFM) steel. "
+                       "Composition: 8.7 wt% Cr, 1.0 wt% W, 0.2 wt% V, 0.1 wt% Ta, "
+                       "0.4 wt% Mn, balance Fe (~89.6 wt%). Intentionally excludes Ni, Mo, "
+                       "Nb, Cu — the major activation-hazard elements. Enables hands-on "
+                       "decommissioning within 50–100 y (Lindau et al. 2005). "
+                       "No Co impurity modeled — spec limits Co to <50 ppm; contribution "
+                       "is secondary to bulk Fe/Mn/Cr products at this level.",
+        "impurities": {
+            "Ni": {"ppm_range": [None, 100], "significance": "low",
+                   "note": "EUROFER97 spec: Ni ≤100 ppm. Ni-58(n,p)→Co-58 (70.9 d) under 14 MeV; "
+                           "contribution minor given low Ni and reduced-activation design intent."},
+            "Nb": {"ppm_range": [None, 10], "significance": "low",
+                   "note": "Very strict Nb spec (<10 ppm). Nb-93(n,γ)→Nb-94 (20,300 y) waste concern "
+                           "essentially eliminated at this level. Critical procurement requirement."},
+            "Co": {"ppm_range": [None, 50], "significance": "low",
+                   "note": "EUROFER spec: Co <50 ppm. At 50 ppm, Co-60 contribution comparable to "
+                           "Ta-182 from the 0.1 wt% Ta alloying addition."},
+        },
+        "density_g_cc": 7.75,
+        "isotopes": {
+            # Iron (89.6 wt% → 89.69 atom%)
+            "Fe-54": 0.05242, "Fe-56": 0.82270, "Fe-57": 0.01900, "Fe-58": 0.00253,
+            # Chromium (8.7 wt% → 9.35 atom%)
+            "Cr-50": 0.00406, "Cr-52": 0.07833, "Cr-53": 0.00888, "Cr-54": 0.00221,
+            # Tungsten (1.0 wt% → 0.304 atom%)
+            "W-180": 0.000004, "W-182": 0.000806, "W-183": 0.000435,
+            "W-184": 0.000932, "W-186": 0.000865,
+            # Vanadium (0.2 wt% → 0.220 atom%)
+            "V-50": 0.0000055, "V-51": 0.002192,
+            # Tantalum (0.1 wt% → 0.031 atom%; Ta-181 = 99.988%)
+            "Ta-181": 0.000307,
+            # Manganese (0.4 wt% → 0.407 atom%; Mn-55 = 100%)
+            "Mn-55": 0.004069,
+        },
+    },
+
+    "Carbon Steel (A36)": {
+        "category":    "steel",
+        "description": "ASTM A36 structural carbon steel — conservative scrap-origin impurity model. "
+                       "Bulk: 98.5 wt% Fe, 1.0 wt% Mn, 0.25 wt% C, 0.40 wt% Si. "
+                       "A36 has NO controlled composition beyond mechanical properties — produced "
+                       "from scrap steel with highly variable trace element content. "
+                       "Impurities modeled conservatively: Co 2000 ppm, Cu 1000 ppm, Ni 1000 ppm. "
+                       "For activation calculations, A36 is the worst-case carbon steel.",
+        "impurities": {
+            "Co": {"ppm_range": [50, 5000], "significance": "CRITICAL",
+                   "note": "Co-59(n,γ)→Co-60 (5.27 y). Uncontrolled in A36; scrap-origin heats "
+                           "measured up to 5000 ppm. Modeled at 2000 ppm (conservative). "
+                           "Co-60 dominates long-term dose for any irradiated A36."},
+            "Cu": {"ppm_range": [500, 2000], "significance": "moderate",
+                   "note": "Cu residual common in scrap steel. Cu-63(n,γ)→Cu-64 (12.7 h); "
+                           "Cu-64→Zn-64→Zn-65 (244 d, 1116 keV) via decay chain. "
+                           "Zn-65 contributes to medium-term dose from irradiated A36."},
+            "Ni": {"ppm_range": [500, 3000], "significance": "moderate",
+                   "note": "Ni in scrap steel; Ni-63 (100 y) from Ni-62(n,γ) — long-term "
+                           "waste classification concern. Ni-58(n,p)→Co-58 (70.9 d) at 14 MeV."},
+            "Nb": {"ppm_range": [0, 500], "significance": "high",
+                   "note": "Nb from scrap SS-347 or Nb-stabilized steels. "
+                           "Nb-93(n,γ)→Nb-94 (20,300 y): NRC Class C limit = 0.2 Ci/m³. "
+                           "50 ppm Nb in irradiated A36 can exceed Class C at high fluence."},
+        },
+        "density_g_cc": 7.85,
+        "isotopes": {
+            # Iron (97.13 wt% after impurities → 97.11 atom%)
+            "Fe-54": 0.05677, "Fe-56": 0.89123, "Fe-57": 0.02060, "Fe-58": 0.00274,
+            # Manganese (1.0 wt% → 1.017 atom%)
+            "Mn-55": 0.01017,
+            # Carbon (0.25 wt% → 1.158 atom%)
+            "C-12": 0.01146, "C-13": 0.000123,
+            # Silicon (0.40 wt% → 0.795 atom%)
+            "Si-28": 0.00733, "Si-29": 0.000371, "Si-30": 0.000247,
+            # Co impurity — 2000 ppm (conservative scrap-origin)
+            # f_Co = (2e-3/58.933) / (0.985/55.845 + 0.010/54.938 + ...) ≈ 0.00189
+            "Co-59": 0.00189,
+            # Cu impurity — 1000 ppm
+            "Cu-63": 0.000479, "Cu-65": 0.000213,
+            # Ni impurity — 1000 ppm
+            "Ni-58": 0.000473, "Ni-60": 0.000182, "Ni-61": 0.0000079,
+            "Ni-62": 0.0000252, "Ni-64": 0.0000064,
+        },
+    },
+
+    "Aluminum 6061-T6": {
+        "category":    "metal",
+        "description": "Aluminum alloy 6061-T6 (ASTM B209). Nominal composition: "
+                       "Al balance (~97.3%), Mg 1.0%, Si 0.6%, Cu 0.25%, Cr 0.20%, "
+                       "Fe 0.35%, Zn 0.125%, Ti 0.075%, Mn 0.075%. "
+                       "Unlike pure Al, this alloy has meaningful Cr, Cu, Zn, and Fe as "
+                       "bulk constituents — each with distinct activation products. "
+                       "Na-24 from Al-27(n,α) dominates early shutdown dose.",
+        "impurities": {
+            "Co": {"ppm_range": [10, 100], "significance": "moderate",
+                   "note": "Uncontrolled in Al alloy specs. Scrap-origin Al can carry "
+                           "10–100 ppm Co → Co-60 contribution at >1 y cooling."},
+        },
+        "density_g_cc": 2.70,
+        "isotopes": {
+            # Aluminum (97.325 wt% → 97.790 atom%) — Al-27 = 100% natural abundance
+            "Al-27": 0.97790,
+            # Magnesium (1.0 wt% → 1.114 atom%)
+            "Mg-24": 0.008798, "Mg-25": 0.001114, "Mg-26": 0.001227,
+            # Silicon (0.6 wt% → 0.580 atom%)
+            "Si-28": 0.005349, "Si-29": 0.000271, "Si-30": 0.000180,
+            # Copper (0.25 wt% → 0.107 atom%)
+            "Cu-63": 0.000737, "Cu-65": 0.000329,
+            # Chromium (0.20 wt% → 0.104 atom%)
+            "Cr-50": 0.0000454, "Cr-52": 0.000875, "Cr-53": 0.0000992, "Cr-54": 0.0000247,
+            # Iron (0.35 wt% → 0.170 atom%)
+            "Fe-54": 0.0000994, "Fe-56": 0.001560, "Fe-57": 0.0000360, "Fe-58": 0.0000048,
+            # Zinc (0.125 wt% → 0.052 atom%)
+            "Zn-64": 0.000252, "Zn-66": 0.000144, "Zn-67": 0.0000212,
+            "Zn-68": 0.0000971, "Zn-70": 0.0000032,
+            # Titanium (0.075 wt% → 0.043 atom%)
+            "Ti-46": 0.0000351, "Ti-47": 0.0000317, "Ti-48": 0.000314,
+            "Ti-49": 0.0000230, "Ti-50": 0.0000221,
+            # Manganese (0.075 wt% → 0.037 atom%)
+            "Mn-55": 0.000371,
+        },
+    },
+
+    "Titanium Ti-6Al-4V": {
+        "category":    "metal",
+        "description": "Titanium alloy Ti-6Al-4V (Grade 5, ASTM B265). Nominal: "
+                       "Ti 90 wt%, Al 6 wt%, V 4 wt%. Used in fusion vacuum vessels, "
+                       "cryostat supports, and RF hardware — valued for low activation, "
+                       "high strength, and non-magnetic properties. "
+                       "Reduced-activation material: residual dose ≤hands-on within 50–100 y. "
+                       "Al-27(n,α)→Na-24 dominates early dose. Very long-term residual: "
+                       "Al-26 (t½=720,000 y) from Al-27(n,2n) at 14 MeV — negligible activity "
+                       "at fusion fluences. Tramp impurities (Co, Ni, Nb) can compromise "
+                       "reduced-activation performance if uncontrolled (OSTI 5171710).",
+        "impurities": {
+            "Co": {"ppm_range": [10, 100], "significance": "moderate",
+                   "note": "Identified as detrimental tramp impurity in Ti alloys (OSTI 5171710). "
+                           "Co-59(n,γ)→Co-60 (5.27 y) — can dominate dose at 1–10 y cooling "
+                           "if Co >50 ppm. Procurement specification should set Co <20 ppm."},
+            "Ni": {"ppm_range": [50, 300], "significance": "moderate",
+                   "note": "Ni-58(n,p)→Co-58 (70.9 d) at 14 MeV. At 300 ppm Ni, Co-58 "
+                           "production competes with Sc-47/48 from bulk Ti reactions."},
+            "Nb": {"ppm_range": [0, 500], "significance": "high",
+                   "note": "If present from scrap input, Nb-93(n,γ)→Nb-94 (20,300 y) "
+                           "introduces a Class C waste classification concern."},
+        },
+        "density_g_cc": 4.43,
+        "isotopes": {
+            # Titanium (90 wt% → 86.20 atom%)
+            "Ti-46": 0.07112, "Ti-47": 0.06413, "Ti-48": 0.63548,
+            "Ti-49": 0.04663, "Ti-50": 0.04465,
+            # Aluminum (6 wt% → 10.19 atom%)
+            "Al-27": 0.10192,
+            # Vanadium (4 wt% → 3.599 atom%)
+            "V-50": 0.000090, "V-51": 0.035901,
+        },
+    },
+
+    "Tantalum (pure)": {
+        "category":    "metal",
+        "description": "Pure tantalum metal. Ta-181 = 99.988%, Ta-180m ≈ 0.012% (essentially stable). "
+                       "CONSERVATIVE MODEL: real structural applications typically use Ta-2.5W alloy "
+                       "(2.5 wt% W for strength) — pure Ta over-estimates activation vs. the alloy "
+                       "in the first ~1–2 years, after which they are comparable. "
+                       "Ta-181(n,γ)→Ta-182 (σ_th=20.5 b, t½=115 d) is the single dominant "
+                       "activation product. No very-long-lived activation products from bulk Ta. "
+                       "Nb impurity (10–100 ppm) is the main waste classification concern.",
+        "impurities": {
+            "W": {"ppm_range": [10, 100], "significance": "low",
+                  "note": "W is the major impurity in pure Ta. W-187 (t½=23.7 h) from W-186(n,γ). "
+                          "Minor contribution vs. Ta-182."},
+            "Nb": {"ppm_range": [10, 100], "significance": "moderate",
+                   "note": "Nb is the critical impurity: Nb-93(n,γ)→Nb-94 (t½=20,300 y). "
+                           "NRC Class C limit = 0.2 Ci/m³. Even 50 ppm Nb at high fluence "
+                           "may require Class C disposal."},
+        },
+        "density_g_cc": 16.65,
+        "isotopes": {
+            "Ta-181": 0.99988,
+            # Ta-180m at 0.012% is essentially stable; omit from activation calculation
+        },
+    },
+
+    "Heavymet (90W-7Ni-3Fe)": {
+        "category":    "metal",
+        "description": "Tungsten heavy alloy — 90 wt% W, 7 wt% Ni, 3 wt% Fe. Produced by "
+                       "liquid-phase sintering. Density ~17.0 g/cm³. Used as radiation "
+                       "shielding, collimators, and counterweights in fusion and accelerator "
+                       "facilities. High density enables compact γ/fast-n attenuation. "
+                       "WARNING: 7 wt% Ni at 14 MeV produces Co-58 (Ni-58(n,p)) and Co-60 "
+                       "(Ni-60(n,p)); Ni-63 (t½=100 y) from Ni-62(n,γ) dominates long-term "
+                       "waste classification (NRC Class C: 35 Ci/m³). Heavily irradiated "
+                       "heavymet will likely require Class C disposal analysis.",
+        "impurities": {
+            "Co": {"ppm_range": [10, 100], "significance": "moderate",
+                   "note": "Sintering impurity. Additional Co-60 on top of Co produced from "
+                           "Ni-60(n,p). At 100 ppm Co + 7 wt% Ni, Co-60 is still dominated "
+                           "by the Ni-derived production."},
+            "Ta": {"ppm_range": [None, 100], "significance": "low",
+                   "note": "From W feedstock. Ta-182 (115 d) minor vs. Re/Os chain and Ni products."},
+        },
+        "density_g_cc": 17.0,
+        "isotopes": {
+            # Tungsten (90 wt% → 73.90 atom%)
+            "W-180": 0.000887, "W-182": 0.195809, "W-183": 0.105731,
+            "W-184": 0.226401, "W-186": 0.210162,
+            # Nickel (7 wt% → 18.01 atom%)
+            "Ni-58": 0.12261, "Ni-60": 0.04724, "Ni-61": 0.002054,
+            "Ni-62": 0.006545, "Ni-64": 0.001668,
+            # Iron (3 wt% → 8.11 atom%)
+            "Fe-54": 0.004739, "Fe-56": 0.074380, "Fe-57": 0.001718, "Fe-58": 0.000229,
+        },
+    },
+
+    "Tungsten Carbide (WC-Co)": {
+        "category":    "metal",
+        "description": "Tungsten carbide with cobalt binder — WC-6Co grade (94 wt% WC, 6 wt% Co). "
+                       "Effective composition: W 88.2 wt%, C 5.76 wt%, Co 6.0 wt%. "
+                       "Density ~15.0 g/cm³. Used as neutron shielding in compact fusion devices "
+                       "(STEP, ST40), collimators, and diagnostic inserts. WC provides combined "
+                       "high-Z gamma + neutron attenuation; C moderates fast neutrons. "
+                       "CRITICAL WARNING: 6 wt% Co binder (orders of magnitude more than Co "
+                       "impurity in SS-316) makes Co-60 the COMPLETELY DOMINANT activation product "
+                       "for the first 10–20 y post-irradiation. Standard WC-Co is a poor choice "
+                       "for any structural element requiring post-irradiation handling. "
+                       "Low-activation Fe-binder alternatives (WC-FeNi) are under development "
+                       "(ScienceDirect 2025).",
+        "impurities": {
+            "N (in WC feedstock)": {"ppm_range": [50, 200], "significance": "moderate",
+                                    "note": "N-14(n,p)→C-14 (5730 y, β only). C-14 LLW concern: "
+                                            "Class B limit = 80 Ci/m³. Not modeled in isotopes — "
+                                            "add N-14 at 100 ppm atom fraction for full calculation."},
+            "Ta": {"ppm_range": [50, 200], "significance": "low",
+                   "note": "Ta impurity in WC feedstock → Ta-182 (115 d). Minor vs. Co-60."},
+        },
+        "density_g_cc": 15.0,
+        "isotopes": {
+            # Tungsten (88.24 wt% → 45.22 atom%)
+            "W-180": 0.000543, "W-182": 0.119830, "W-183": 0.064709,
+            "W-184": 0.138551, "W-186": 0.128568,
+            # Carbon (5.76 wt% → 45.19 atom%; 98.93% C-12)
+            "C-12": 0.447066, "C-13": 0.004835,
+            # Cobalt binder (6.0 wt% → 9.59 atom%; Co-59 = 100%)
+            "Co-59": 0.095921,
+        },
+    },
+
+    "OPC Concrete": {
+        "category":    "concrete",
+        "description": "Ordinary Portland Cement concrete — ANSI/ANS-6.4 standard composition. "
+                       "Approximate bulk: H 1.0%, O 53.0%, Na 1.6%, Mg 0.2%, Al 2.1%, Si 20.0%, "
+                       "K 1.9%, Ca 14.8%, Fe 3.5%, C 0.1% by weight. Density 2.3 g/cm³. "
+                       "ACTIVATION DOMINATED BY TRACE IMPURITIES: Eu (0.5–2 ppm, σ_th~9200 b) "
+                       "and Co (5–30 ppm) are the critical drivers at 1–50 y cooling. "
+                       "Eu-152 (t½=13.5 y) dominates 5–50 y dose; Co-60 co-dominant at 1–10 y. "
+                       "Na-24 dominates first 24 h (bulk Na). Modeled at representative "
+                       "impurity levels: Eu 1 ppm, Co 15 ppm, Cs 5 ppm, Sc 10 ppm.",
+        "impurities": {
+            "Eu": {"ppm_range": [0.5, 2], "significance": "CRITICAL",
+                   "note": "Eu-151(n,γ)→Eu-152 (t½=13.5 y): σ_th~9200 b (MACS). "
+                           "Even at 0.5 ppm, Eu-152 dominates OPC concrete dose at 5–50 y. "
+                           "SCK-CEN bioshield study identified Eu as dominant long-term driver."},
+            "Co": {"ppm_range": [5, 30], "significance": "CRITICAL",
+                   "note": "Co-59(n,γ)→Co-60 (5.27 y). At 5–30 ppm, Co-60 is co-dominant "
+                           "with Eu-152 at 1–10 y cooling. Varies by aggregate type."},
+            "Cs": {"ppm_range": [1, 15], "significance": "high",
+                   "note": "Cs-133(n,γ)→Cs-134 (t½=2.07 y, σ_th=29 b). 605/796 keV gammas. "
+                           "Significant at 1–5 y cooling in OPC concrete."},
+            "Sc": {"ppm_range": [5, 20], "significance": "moderate",
+                   "note": "Sc-45(n,γ)→Sc-46 (t½=83.8 d, σ_th=27.2 b). 889/1121 keV. "
+                           "Contributes to 1–6 month dose window."},
+        },
+        "density_g_cc": 2.30,
+        "isotopes": {
+            # Hydrogen (1.0 wt% → 17.525 atom%)
+            "H-1": 0.17525,
+            # Oxygen (53.0 wt% → 58.51 atom%)
+            "O-16": 0.58371, "O-17": 0.000223, "O-18": 0.001200,
+            # Sodium (1.6 wt% → 1.229 atom%)
+            "Na-23": 0.01229,
+            # Magnesium (0.2 wt% → 0.145 atom%)
+            "Mg-24": 0.001148, "Mg-25": 0.000145, "Mg-26": 0.000160,
+            # Aluminum (2.1 wt% → 1.374 atom%)
+            "Al-27": 0.01374,
+            # Silicon (20.0 wt% → 12.58 atom%)
+            "Si-28": 0.11601, "Si-29": 0.005875, "Si-30": 0.003900,
+            # Potassium (1.9 wt% → 0.858 atom%)
+            "K-39": 0.008007, "K-41": 0.000578,
+            # Calcium (14.8 wt% → 6.522 atom%)
+            "Ca-40": 0.063227, "Ca-42": 0.000422, "Ca-43": 0.000088,
+            "Ca-44": 0.001360, "Ca-48": 0.000122,
+            # Iron (3.5 wt% → 1.108 atom%)
+            "Fe-54": 0.000648, "Fe-56": 0.010162, "Fe-57": 0.000235, "Fe-58": 0.000031,
+            # Carbon (0.1 wt% → 0.147 atom%)
+            "C-12": 0.001453, "C-13": 0.000016,
+            # TRACE IMPURITIES — activation-critical (from literature: SCK-CEN, ORNL)
+            # Europium — 1 ppm by weight → f ≈ 1.16e-7; Eu-151 (47.81%) = 5.56e-8
+            "Eu-151": 0.0000001, "Eu-153": 0.0000001,
+            # Cobalt — 15 ppm → f ≈ 4.49e-6
+            "Co-59": 0.0000045,
+            # Cesium — 5 ppm → f ≈ 6.65e-7
+            "Cs-133": 0.0000007,
+            # Scandium — 10 ppm → f ≈ 3.93e-6
+            "Sc-45": 0.0000039,
+        },
+    },
+
+    "LAC Concrete (Limestone)": {
+        "category":    "concrete",
+        "description": "Low-activation limestone aggregate concrete — representative of LAC designs "
+                       "for fusion facility bioshields (Kinno et al. 2007 Fujita LAC; ITER bioshield). "
+                       "Approximate bulk: H 0.6%, O 53.0%, Na 0.08%, Mg 0.1%, Al 1.0%, Si 6.3%, "
+                       "K 0.2%, Ca 30.6%, Fe 0.3%, C 5.4% by weight. Density 2.3 g/cm³. "
+                       "Kinno et al. reported dose rate reduction of 1/300–1/400 vs. andesite "
+                       "aggregate at 1 year cooling, primarily from Co and Eu reduction. "
+                       "Eu-152 still dominates at >5 y despite 3–10× reduction vs. OPC. "
+                       "Modeled impurities: Eu 0.2 ppm, Co 3 ppm, Cs 1 ppm, Sc 3 ppm.",
+        "impurities": {
+            "Eu": {"ppm_range": [0.1, 0.5], "significance": "CRITICAL",
+                   "note": "Eu cannot be eliminated from limestone aggregate — still the dominant "
+                           "long-term driver at >5 y despite 3–10× reduction vs. OPC."},
+            "Co": {"ppm_range": [1, 5], "significance": "high",
+                   "note": "Significant improvement vs. OPC (5–30 ppm). LAC design target: "
+                           "<5 ppm Co. Co-60 still relevant at 1–5 y."},
+            "Na": {"ppm_range": [800, 3000], "significance": "moderate",
+                   "note": "Reduced 3–8× vs. OPC. Na-24 (14.96 h) prompt dose substantially "
+                           "lower in LAC — important for early re-entry after operation."},
+        },
+        "density_g_cc": 2.30,
+        "isotopes": {
+            # Hydrogen (0.6 wt% → 11.02 atom%)
+            "H-1": 0.11022,
+            # Oxygen (53.0 wt% → 61.34 atom%)
+            "O-16": 0.61341, "O-17": 0.000234, "O-18": 0.001258,
+            # Sodium (0.08 wt% → 0.064 atom%)
+            "Na-23": 0.000644,
+            # Magnesium (0.1 wt% → 0.076 atom%)
+            "Mg-24": 0.000601, "Mg-25": 0.000076, "Mg-26": 0.000084,
+            # Aluminum (1.0 wt% → 0.687 atom%)
+            "Al-27": 0.006870,
+            # Silicon (6.3 wt% → 4.153 atom%)
+            "Si-28": 0.038298, "Si-29": 0.001939, "Si-30": 0.001287,
+            # Potassium (0.2 wt% → 0.095 atom%)
+            "K-39": 0.000886, "K-41": 0.000064,
+            # Calcium (30.6 wt% → 14.138 atom%) — major component in limestone aggregate
+            "Ca-40": 0.137070, "Ca-42": 0.000914, "Ca-43": 0.000191,
+            "Ca-44": 0.002949, "Ca-48": 0.000264,
+            # Iron (0.3 wt% → 0.099 atom%)
+            "Fe-54": 0.0000580, "Fe-56": 0.000910, "Fe-57": 0.0000210, "Fe-58": 0.0000028,
+            # Carbon (5.4 wt% → 8.325 atom%) — from CaCO3 limestone
+            "C-12": 0.082337, "C-13": 0.000887,
+            # TRACE IMPURITIES — reduced vs. OPC (Eu 0.2 ppm, Co 3 ppm, Cs 1 ppm, Sc 3 ppm)
+            "Eu-151": 0.0000000112, "Eu-153": 0.0000000122,  # 0.2 ppm total Eu
+            "Co-59": 0.0000009,     # 3 ppm Co
+            "Cs-133": 0.0000001,    # 1 ppm Cs
+            "Sc-45": 0.0000012,     # 3 ppm Sc
+        },
+    },
+
+    "Lead": {
+        "category":    "shielding",
+        "description": "Natural lead — used as gamma shielding in nuclear and fusion facilities. "
+                       "Isotopics: Pb-204 (1.4%), Pb-206 (24.1%), Pb-207 (22.1%), Pb-208 (52.4%). "
+                       "Density 11.35 g/cm³. "
+                       "Lead is a VERY WEAK activator under thermal neutron flux — Pb σ_th values "
+                       "range from 0.0007–0.699 b. No significant long-lived gamma emitters from "
+                       "bulk Pb activation. "
+                       "CRITICAL: Bi impurity (Bi-209(n,γ)→Bi-210→Po-210) is the dominant "
+                       "decommissioning concern. Po-210 (t½=138 d, 5.3 MeV α) is a radiotoxic "
+                       "inhalation hazard. Nuclear-grade Pb specifies Bi < 10 ppm. "
+                       "Commercial Pb: 10–10,000 ppm Bi. Modeled at 50 ppm Bi.",
+        "impurities": {
+            "Bi": {"ppm_range": [10, 10000], "significance": "CRITICAL — alpha hazard",
+                   "note": "Bi-209(n,γ)→Bi-210 (5.01 d) → Po-210 (t½=138 d, 5.3 MeV α). "
+                           "Po-210 zero gamma; extreme inhalation radiotoxicity. "
+                           "Not a contact dose concern but a contamination/waste hazard. "
+                           "Commercial Pb can have ppm → % Bi levels. Nuclear-grade: <10 ppm."},
+        },
+        "density_g_cc": 11.35,
+        "isotopes": {
+            # Natural Pb isotopics (IUPAC 2021)
+            "Pb-204": 0.01400,
+            "Pb-206": 0.24100,
+            "Pb-207": 0.22100,
+            "Pb-208": 0.52400,
+            # Bismuth impurity — modeled at 50 ppm (mid-range commercial Pb)
+            # f_Bi = (50e-6/208.980) / (1/207.2) = 50e-6 × 207.2/208.980 = 4.957e-5
+            "Bi-209": 0.0000496,
+        },
+    },
+
+    "Water (H2O)": {
+        "category":    "moderator",
+        "description": "Liquid water — natural isotopic composition. H-1 (99.985%), H-2 (0.015%), "
+                       "O-16 (99.757%), O-17 (0.038%), O-18 (0.205%). Density 1.00 g/cm³. "
+                       "No significant long-lived gamma emitters from pure water activation. "
+                       "N-16 from O-16(n,p) at 14 MeV dominates all online/prompt dose "
+                       "but is gone within 2 minutes of shutdown (t½=7.13 s). "
+                       "PRIMARY DOSE CONCERN in water-cooled systems: activated corrosion "
+                       "products (Fe, Cr, Co, Ni particles) from piping and heat exchangers — "
+                       "this is a separate OAC product problem, not modeled here. "
+                       "C-14 from O-17(n,α) and tritium from D-T permeation are waste concerns.",
+        "impurities": {
+            "Dissolved solids": {"ppm_range": [1, 1000], "significance": "moderate — system dependent",
+                                  "note": "Activated corrosion products (Fe-55, Co-60, Mn-54, Ni-63) "
+                                          "in circulating coolant dominate activated water dose rates. "
+                                          "Controlled by water chemistry and filtering. Not modeled."},
+        },
+        "density_g_cc": 1.00,
+        "isotopes": {
+            # Hydrogen (11.19 wt% → 66.67 atom% of H2O by molecule)
+            # In H2O: 2 H per O → H atom fraction = 2/3 = 0.66667
+            "H-1": 0.66557,   # 99.985% of H × 2/3
+            "H-2": 0.000100,  # 0.015% of H × 2/3
+            # Oxygen (88.81 wt% → 33.33 atom%)
+            "O-16": 0.33252,  # 99.757% of O × 1/3
+            "O-17": 0.000127, # 0.038% of O × 1/3
+            "O-18": 0.000683, # 0.205% of O × 1/3
+        },
+    },
+
+    "Silicon Dioxide (SiO2)": {
+        "category":    "shielding",
+        "description": "Silicon dioxide (quartz / fused silica). Bulk: Si 46.74 wt%, O 53.26 wt%. "
+                       "Density 2.65 g/cm³ (quartz), 2.20 g/cm³ (fused silica). "
+                       "Si-28(n,p)→Al-28 (2.24 min) and O-16(n,p)→N-16 (7.13 s) under fast flux "
+                       "are the only significant activation products — both very short-lived. "
+                       "SiO₂ is an excellent choice for windows/viewports in radiation areas "
+                       "where the irradiation is pulsed (components return to background rapidly). "
+                       "High-purity fused silica (1–10 ppm metallic impurities) is essentially "
+                       "non-activating beyond the prompt short-lived products.",
+        "impurities": {
+            "Fe": {"ppm_range": [10, 1000], "significance": "low-moderate (natural quartz)",
+                   "note": "Fe-59 (44.5 d) from Fe-58(n,γ) in natural quartz; negligible in "
+                           "high-purity fused silica."},
+            "Na": {"ppm_range": [10, 500], "significance": "moderate at higher levels",
+                   "note": "Na-24 (14.96 h) from Na-23(n,γ). Not modeled; relevant only if "
+                           "Na > 100 ppm in specific glass/quartz grades."},
+            "Co": {"ppm_range": [0.1, 5], "significance": "low",
+                   "note": "Co-60 at very low levels; dominated by short-lived Si/O products "
+                           "for most practical SiO2 applications."},
+        },
+        "density_g_cc": 2.65,
+        "isotopes": {
+            # Silicon (46.74 wt% → 33.33 atom% of SiO2 by formula Si:O = 1:2)
+            "Si-28": 0.30756, "Si-29": 0.015574, "Si-30": 0.010332,
+            # Oxygen (53.26 wt% → 66.67 atom%)
+            "O-16": 0.66500, "O-17": 0.000253, "O-18": 0.001366,
+        },
+    },
+
+    "Borated Concrete (Kretekast)": {
+        "category":    "concrete",
+        "description": "Kretekast borated concrete — SWX-277 (Shieldwerx). High-alumina borated "
+                       "concrete designed for combined neutron + gamma shielding. "
+                       "Composition from MCNP material definition (weight fractions): "
+                       "H 4.9%, O 62.66%, B-10 0.308%, B-11 1.297%, N 0.01%, Na 0.13%, "
+                       "Al 21.45%, S 0.16%, Si 1.38%, Ca 6.56%, C 0.45%, Fe 0.27%. "
+                       "Density 1.68 g/cm³. High Al content (21.45%) suggests aluminate-based "
+                       "aggregate (e.g., calcium aluminate or gibbsite Al(OH)3). "
+                       "Total B = 1.605 wt% (natural B-10/B-11 split). "
+                       "B-10(n,α)→Li-7 is the thermal neutron capture reaction (shielding function). "
+                       "ACTIVATION NOTE: Al-27(n,α)→Na-24 from 21 wt% Al dominates early shutdown "
+                       "dose (much more than in OPC due to high Al content). "
+                       "N-14(n,p)→C-14 (0.01 wt% N) is a long-term LLW waste concern. "
+                       "Same Eu/Co trace impurity concerns as OPC — composition-dependent.",
+        "impurities": {
+            "Eu": {"ppm_range": [0.5, 2], "significance": "CRITICAL",
+                   "note": "Eu-151(n,γ)→Eu-152 (13.5 y). Al-aggregate concretes may differ from "
+                           "OPC in Eu content — depends on source aggregate purity. "
+                           "Assume OPC-level (1 ppm) unless aggregate Eu is measured."},
+            "Co": {"ppm_range": [5, 30], "significance": "high",
+                   "note": "Co-60 from Co impurity in cement/aggregate. Conservative OPC-level "
+                           "assumption until measured."},
+        },
+        "density_g_cc": 1.68,
+        "isotopes": {
+            # Hydrogen — 4.9 wt% (from MCNP: 1001 = H-1 only)
+            "H-1": 0.48672,
+            # Oxygen — 62.66 wt% (from MCNP: 8016 = O-16 only)
+            "O-16": 0.39215,
+            # Boron — given as separate B-10 and B-11 in MCNP
+            "B-10": 0.003084,
+            "B-11": 0.011795,
+            # Nitrogen — 0.01 wt% (14007 → N-14)
+            "N-14": 0.000071,
+            # Sodium — 0.13 wt% (Na-23)
+            "Na-23": 0.000566,
+            # Aluminum — 21.45 wt% (Al-27 = 100%)
+            "Al-27": 0.079600,
+            # Sulfur — 0.16 wt% (natural S)
+            "S-32": 0.000474, "S-33": 0.000004, "S-34": 0.000021,
+            # Silicon — 1.38 wt% (natural Si)
+            "Si-28": 0.004534, "Si-29": 0.000230, "Si-30": 0.000152,
+            # Calcium — 6.56 wt% (natural Ca)
+            "Ca-40": 0.015887, "Ca-42": 0.000106, "Ca-43": 0.000022,
+            "Ca-44": 0.000342, "Ca-48": 0.000031,
+            # Carbon — 0.45 wt% (natural C)
+            "C-12": 0.003714, "C-13": 0.000040,
+            # Iron — 0.27 wt% (natural Fe)
+            "Fe-54": 0.000028, "Fe-56": 0.000444, "Fe-57": 0.000010,
+            # TRACE IMPURITIES (conservative OPC-level until measured)
+            "Eu-151": 0.0000001, "Eu-153": 0.0000001,
+            "Co-59": 0.0000045,
+            "Cs-133": 0.0000007,
+            "Sc-45": 0.0000039,
+        },
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Isotopic masses (atomic mass units, u)
+# Source: AME2020 (Atomic Mass Evaluation)
+# ---------------------------------------------------------------------------
+
+ISOTOPE_MASS = {
+    "Al-27": 26.9815,
+    "Fe-54": 53.9396, "Fe-56": 55.9349, "Fe-57": 56.9354, "Fe-58": 57.9333,
+    "Cr-50": 49.9460, "Cr-52": 51.9405, "Cr-53": 52.9407, "Cr-54": 53.9389,
+    "Ni-58": 57.9353, "Ni-60": 59.9308, "Ni-61": 60.9311, "Ni-62": 61.9283, "Ni-64": 63.9280,
+    "Mn-55": 54.9380,
+    "Cu-63": 62.9296, "Cu-65": 64.9278,
+    "W-180": 179.9467, "W-182": 181.9482, "W-183": 182.9502,
+    "W-184": 183.9509, "W-186": 185.9544,
+    # Phase 2B additions
+    "Co-59": 58.9332,
+    "Na-23": 22.9898,
+    "Eu-151": 150.9198, "Eu-153": 152.9212,
+    "Cs-133": 132.9054,
+    "Sc-45": 44.9559,
+    "Ba-132": 131.9050, "Ba-134": 133.9045, "Ba-136": 135.9046,
+    "Ba-137": 136.9058, "Ba-138": 137.9052,
+    "Zn-64": 63.9291, "Zn-66": 65.9260, "Zn-67": 66.9271, "Zn-68": 67.9248, "Zn-70": 69.9253,
+    # Phase 2C / impurity additions
+    "Mo-92": 91.9068, "Mo-94": 93.9051, "Mo-95": 94.9058, "Mo-96": 95.9047,
+    "Mo-97": 96.9060, "Mo-98": 97.9054, "Mo-100": 99.9075,
+    "Nb-93": 92.9064,
+    "Ag-107": 106.9051, "Ag-109": 108.9048,
+    "Ta-181": 180.9480,
+    # Light elements and minor SS constituents
+    "C-12":  12.0000, "C-13":  13.0034,
+    "Si-28": 27.9769, "Si-29": 28.9765, "Si-30": 29.9738,
+    "P-31":  30.9738,
+    "S-32":  31.9721, "S-33":  32.9715, "S-34":  33.9679, "S-36":  35.9671,
+    # New metals — Phase 3
+    "Ti-46": 45.9526, "Ti-47": 46.9518, "Ti-48": 47.9480, "Ti-49": 48.9479, "Ti-50": 49.9448,
+    "V-50":  49.9472, "V-51":  50.9440,
+    "Pb-204": 203.9730, "Pb-206": 205.9745, "Pb-207": 206.9759, "Pb-208": 207.9767,
+    "Bi-209": 208.9804,
+    "H-1":   1.00783, "H-2":   2.01410,
+    "O-16":  15.9949, "O-17":  16.9991, "O-18":  17.9992,
+    "N-14":  14.0031, "N-15":  15.0001,
+    "B-10":  10.0129, "B-11":  11.0093,
+    "Ni-59": 58.9343,   # product mass for Ni-58(n,γ)→Ni-59
+    # Calcium isotopes
+    "Ca-40": 39.9626, "Ca-42": 41.9586, "Ca-43": 42.9588,
+    "Ca-44": 43.9555, "Ca-46": 45.9537, "Ca-48": 47.9525,
+    # Potassium isotopes
+    "K-39": 38.9637, "K-40": 39.9640, "K-41": 40.9618,
+    # Magnesium isotopes
+    "Mg-24": 23.9850, "Mg-25": 24.9858, "Mg-26": 25.9826,
+    # Lead isotopes (already in ISOTOPE_MASS from Phase 3 addition above, but ensure all present)
+    # Bismuth
+    # (Pb-204/206/207/208 and Bi-209 already added above)
+    # Boron
+    "B-10": 10.0129, "B-11": 11.0093,
+    # Additional for completeness
+    "Zn-69": 68.9266,  # product of Zn-68(n,γ) — short-lived (56 min)
+    "Sc-46": 45.9552,  # product of Sc-45(n,γ) — for mass calculation
+    "Sc-47": 46.9524,  # product of Ti-47(n,p)
+    "Sc-48": 47.9522,  # product of Ti-48(n,p)
+    "V-52":  51.9448,  # product of V-51(n,γ)
+    "K-42":  41.9624,  # product of K-41(n,γ)
+    "Ca-49": 48.9556,  # product of Ca-48(n,γ)
+    "Ti-51": 50.9466,  # product of Ti-50(n,γ)
+    "N-16":  16.0061,  # product of O-16(n,p)
+}
+
+
+# ---------------------------------------------------------------------------
+# ICRP-74 H*(10)/Φ conversion coefficients for photon ambient dose equivalent
+# Source: ICRP Publication 74 (1996), Table A.21
+# Units: pSv·cm² (per photon per cm²)
+# Interpolation: log-log between tabulated points
+# ---------------------------------------------------------------------------
+
+ICRP74_H10 = [
+    # (energy_MeV, h_star_10 in pSv·cm²)
+    (0.010,  0.0061),
+    (0.015,  0.0830),
+    (0.020,  0.169),
+    (0.030,  0.306),
+    (0.040,  0.370),
+    (0.050,  0.391),
+    (0.060,  0.401),
+    (0.080,  0.438),
+    (0.100,  0.522),
+    (0.150,  0.749),
+    (0.200,  1.000),
+    (0.300,  1.510),
+    (0.400,  1.990),
+    (0.500,  2.440),
+    (0.600,  2.870),
+    (0.800,  3.690),
+    (1.000,  4.400),
+    (1.500,  5.870),
+    (2.000,  6.940),
+    (3.000,  8.550),
+    (4.000,  9.730),
+    (5.000,  10.60),
+    (6.000,  11.30),
+    (8.000,  12.40),
+    (10.00,  13.20),
+]
+
+
+def _load_extracted_3pt():
+    """
+    Merge pointwise-extracted 3-point cross sections into REACTIONS.
+
+    Reads data/endf_3pt.json  → overrides cross_sections["endf8"]
+    Reads data/fendl_3pt.json → sets/overrides cross_sections["fendl32c"]
+
+    Only the three sigma fields (sigma_th, sigma_2p5, sigma_14) are updated;
+    all other reaction metadata (t_half, gammas, …) is left untouched.
+    Missing files are silently skipped so the module still imports if the
+    extraction script has not been run yet.
+    """
+    _DATA_DIR = _os.path.join(_os.path.dirname(__file__), "data")
+    _FILE_MAP = {
+        "endf8":    _os.path.join(_DATA_DIR, "endf_3pt.json"),
+        "fendl32c": _os.path.join(_DATA_DIR, "fendl_3pt.json"),
+    }
+
+    for lib_key, fpath in _FILE_MAP.items():
+        if not _os.path.isfile(fpath):
+            continue
+        try:
+            with open(fpath) as _f:
+                extracted = json.load(_f)
+        except Exception:
+            continue
+
+        for isotope, rxn_map in extracted.items():
+            if isotope not in REACTIONS:
+                continue
+            for rxn_entry in REACTIONS[isotope]:
+                rxn_str = rxn_entry.get("reaction")
+                if rxn_str not in rxn_map:
+                    continue
+                vals = rxn_map[rxn_str]
+                # Ensure cross_sections dict exists
+                if "cross_sections" not in rxn_entry:
+                    rxn_entry["cross_sections"] = {}
+                # Create or update the library sub-dict
+                existing = rxn_entry["cross_sections"].get(lib_key, {})
+                existing.update({
+                    "sigma_th":  vals.get("sigma_th"),
+                    "sigma_2p5": vals.get("sigma_2p5"),
+                    "sigma_14":  vals.get("sigma_14"),
+                })
+                rxn_entry["cross_sections"][lib_key] = existing
+
+
+_load_extracted_3pt()
+
+
+def get_material_activation(material_name, library="endf8"):
+    """
+    Returns activation data for a given material: all reactions for all
+    isotopes present, weighted by isotopic atom fraction.
+    Filters out reactions with stable products.
+
+    library : str
+        Which nuclear data library to use for cross-section values.
+        Must be a key in the reaction's cross_sections dict.
+        Default: "endf8" (ENDF/B-VIII.0).
+        Other valid values once data is populated: "jeff33", "jendl5",
+        "tendl23", "eaf10".
+    """
+    if material_name not in MATERIALS:
+        return None
+
+    mat = MATERIALS[material_name]
+    results = []
+
+    for isotope, atom_frac in mat["isotopes"].items():
+        if isotope not in REACTIONS:
+            continue
+        for rxn in REACTIONS[isotope]:
+            if rxn["t_half"] == "Stable":
+                continue  # skip stable products
+
+            # Extract cross-sections from the requested library.
+            xs = rxn.get("cross_sections", {}).get(library, {})
+            sigma_th  = xs.get("sigma_th")
+            sigma_2p5 = xs.get("sigma_2p5")
+            sigma_14  = xs.get("sigma_14")
+
+            # Spectrum-weighted production proxy: sigma * atom_frac (barns)
+            sigma_f_th  = (sigma_th  * atom_frac) if sigma_th  is not None else None
+            sigma_f_2p5 = (sigma_2p5 * atom_frac) if sigma_2p5 is not None else None
+            sigma_f_14  = (sigma_14  * atom_frac) if sigma_14  is not None else None
+
+            # ENDF vs FENDL 14 MeV disagreement (always computed regardless of library)
+            all_xs = rxn.get("cross_sections", {})
+            s14_endf8  = all_xs.get("endf8",    {}).get("sigma_14")
+            s14_fendl  = all_xs.get("fendl32c", {}).get("sigma_14")
+            if s14_endf8 and s14_endf8 > 0 and s14_fendl is not None:
+                delta_14_pct = 100.0 * (s14_fendl - s14_endf8) / s14_endf8
+            else:
+                delta_14_pct = None
+
+            results.append({
+                "target":        isotope,
+                "atom_frac":     atom_frac,
+                "reaction":      rxn["reaction"],
+                "product":       rxn["product"],
+                "sigma_th":      sigma_th,
+                "sigma_2p5":     sigma_2p5,
+                "sigma_14":      sigma_14,
+                "sigma_f_th":    sigma_f_th,    # σ_th  × f (b) — thermal production proxy
+                "sigma_f_2p5":   sigma_f_2p5,   # σ_2p5 × f (b) — 2.5 MeV production proxy
+                "sigma_f_14":    sigma_f_14,    # σ_14  × f (b) — 14 MeV production proxy
+                "delta_14_pct":  delta_14_pct,  # signed % FENDL vs ENDF at 14.1 MeV
+                "threshold":     rxn["threshold"],
+                "t_half":        rxn["t_half"],
+                "t_half_s":      rxn["t_half_s"],
+                "decay_mode":    rxn["decay_mode"],
+                "gammas":        rxn["gammas"],
+                "notes":         rxn["notes"],
+                "waste_class":   rxn.get("waste_class", None),
+            })
+
+    # Default sort: by thermal production proxy desc, then 14 MeV proxy desc.
+    # The frontend re-sorts dynamically based on selected flux regime.
+    results.sort(key=lambda x: (-(x["sigma_f_th"] or 0), -(x["sigma_f_14"] or 0)))
+    return results

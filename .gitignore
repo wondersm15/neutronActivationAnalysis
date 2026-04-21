@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Environment / secrets
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flask
+instance/
+
+# Pointwise σ(E) data files — large (~95 MB each library), download via:
+#   python tools/download_pointwise.py --library endf8 --include-total
+#   python tools/download_pointwise.py --library fendl32c --include-total
+data/external/
+
+# Backup and intermediate files from the data.py update pipeline
+data.py.bak-*
+data_update_*.json
+
+# ENDF-6 raw downloads (Stage 1 pipeline output, if present)
+data/endf6/

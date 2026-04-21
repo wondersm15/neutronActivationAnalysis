@@ -1,0 +1,6 @@
+# Runtime
+flask>=3.0.0
+
+# Data pipeline tools (tools/download_pointwise.py, tools/extract_pointwise_3pt.py)
+numpy>=1.24.0
+requests>=2.28.0

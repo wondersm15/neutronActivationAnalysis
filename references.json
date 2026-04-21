@@ -1,0 +1,401 @@
+[
+  {
+    "id": "ENDF-VIII",
+    "tag": "ENDF",
+    "type": "nuclear_data_library",
+    "title": "ENDF/B-VIII.0: The 8th Major Release of the Nuclear Reaction Data Library with CIELO-project Cross Sections, New Standards and Thermal Scattering Data",
+    "authors": "D.A. Brown et al.",
+    "journal": "Nuclear Data Sheets",
+    "volume": 148,
+    "pages": "1\u2013142",
+    "year": 2018,
+    "doi": "10.1016/j.nds.2018.02.001",
+    "url": "https://www.sciencedirect.com/science/article/pii/S0090375218300206",
+    "source_db": "NNDC/BNL",
+    "notes": "Primary source for all bundled cross-section and decay data (\u03c3_th, \u03c3_14MeV, t\u00bd, gamma lines). Accessed via NNDC Sigma web interface.",
+    "used_for": [
+      "sigma_th",
+      "sigma_14",
+      "decay_data",
+      "gamma_lines"
+    ]
+  },
+  {
+    "id": "ICRP-74",
+    "tag": "measured",
+    "type": "report",
+    "title": "Conversion Coefficients for use in Radiological Protection against External Radiation",
+    "authors": "International Commission on Radiological Protection",
+    "series": "ICRP Publication 74",
+    "journal": "Annals of the ICRP",
+    "volume": "26(3\u20134)",
+    "year": 1996,
+    "url": "https://www.icrp.org/publication.asp?id=ICRP%20Publication%2074",
+    "notes": "Source for H*(10) ambient dose equivalent conversion coefficients h_K (Sv per Bq\u00b7s\u00b7m\u207b\u00b2) used in dose rate calculation in physics.py.",
+    "used_for": [
+      "dose_rate_H10"
+    ]
+  },
+  {
+    "id": "JAEA-FNS-Sato2018",
+    "tag": "measured",
+    "type": "journal",
+    "title": "Validation of JENDL-4.0 Library for Fusion Neutronics Using FNS Benchmark Experiments",
+    "authors": "S. Sato et al.",
+    "journal": "Journal of Nuclear Science and Technology",
+    "year": 2018,
+    "notes": "JAEA Fusion Neutronics Source (FNS) benchmark facility. Premier experimental dataset for 14.1 MeV activation of concrete and steel. Used to validate activation calculations in the literature review.",
+    "used_for": [
+      "benchmark_reference"
+    ]
+  },
+  {
+    "id": "Kinno-LAC-2007",
+    "tag": "literature",
+    "type": "report",
+    "title": "Development of Low-Activation Concrete for Fusion Reactor",
+    "authors": "M. Kinno, T. Kusunoki, K. Kawasaki, et al.",
+    "series": "Fujita Technical Research Report",
+    "year": 2007,
+    "notes": "Describes the JAEA/Fujita low-activation concrete (LAC) program. Fused alumina aggregate + high-alumina cement (HAC). \u03a3Di/Ci reduction ratios cited: ~1/300\u20131/400 vs. andesite baseline for 14 MeV flux.",
+    "used_for": [
+      "LAC_concrete_composition",
+      "LAC_dose_reduction"
+    ]
+  },
+  {
+    "id": "ORNL-TM-2020-1681",
+    "tag": "literature",
+    "type": "report",
+    "title": "Best Practices for Characterization of Activated Metals at DOE Nuclear Facilities",
+    "authors": "ORNL staff",
+    "series": "ORNL/TM-2020/1681",
+    "institution": "Oak Ridge National Laboratory",
+    "year": 2020,
+    "url": "https://doi.org/10.2172/1760244",
+    "notes": "Activated metals characterization best practices. Provides dose driver ranking for SS304 (Co-60, Mn-54, Fe-55, Ni-63, Eu-152) and Cu (Co-60, Zn-65, Ni-63). Co-60 from ~500\u20132000 ppm Co impurity identified as dominant driver at 2\u20135 y post-irradiation (60\u201395% of external dose).",
+    "used_for": [
+      "activation_notes",
+      "impurity_significance",
+      "Co_impurity_SS"
+    ]
+  },
+  {
+    "id": "SCKECEN-ITER-bioshield",
+    "tag": "literature",
+    "type": "report",
+    "title": "Activation and Dose Rate Calculations for the ITER Bioshield",
+    "authors": "SCK-CEN",
+    "institution": "Belgian Nuclear Research Centre",
+    "osti": "20902507",
+    "year": 2006,
+    "url": "https://www.osti.gov/biblio/20902507",
+    "notes": "ITER bioshield study. Eu-152 from Eu traces in OPC concrete identified as dominant long-term dose driver (Eu-151 \u03c3_th ~9200 b Maxwellian average vs 5900 b 2200 m/s). Co-60 and Cs-134 also significant.",
+    "used_for": [
+      "EU_concrete_activation",
+      "impurity_notes"
+    ]
+  },
+  {
+    "id": "IAEA-TE-2116",
+    "tag": "literature",
+    "type": "report",
+    "title": "Decommissioning and Radioactive Waste Management for Fusion Facilities",
+    "authors": "International Atomic Energy Agency",
+    "series": "IAEA TECDOC-2116",
+    "year": 2023,
+    "url": "https://www.iaea.org/publications/15336/decommissioning-and-radioactive-waste-management-for-fusion-facilities",
+    "notes": "IAEA guidance on fusion facility decommissioning and waste management. NRC Class A/B/C limits and IAEA RS-G-1.7 clearance levels. Referenced for waste classification discussion.",
+    "used_for": [
+      "waste_classification",
+      "regulatory_limits"
+    ]
+  },
+  {
+    "id": "NRC-fusion-activation",
+    "tag": "literature",
+    "type": "regulatory",
+    "title": "10 CFR Part 61 \u2014 Licensing Requirements for Land Disposal of Radioactive Waste",
+    "authors": "U.S. Nuclear Regulatory Commission",
+    "year": 1982,
+    "url": "https://www.nrc.gov/reading-rm/doc-collections/cfr/part061/",
+    "notes": "NRC Class A/B/C activity concentration limits. Key values: Ni-63 Class C limit 3.5\u201335 Ci/m\u00b3 (dominant waste driver for Ni-bearing alloys), Co-60 Class C 700 Ci/m\u00b3, Nb-94 Class C 0.2 Ci/m\u00b3 (most restrictive single limit for activated metals).",
+    "used_for": [
+      "waste_classification_limits"
+    ]
+  },
+  {
+    "id": "IAEA-RS-G-1.7",
+    "tag": "literature",
+    "type": "regulatory",
+    "title": "Application of the Concepts of Exclusion, Exemption and Clearance",
+    "authors": "International Atomic Energy Agency",
+    "series": "IAEA Safety Standards Series RS-G-1.7",
+    "year": 2004,
+    "url": "https://www.iaea.org/publications/6717/application-of-the-concepts-of-exclusion-exemption-and-clearance",
+    "notes": "IAEA clearance levels. Key values: Co-60 0.1 Bq/g, Eu-152 0.1 Bq/g, Cs-134 0.1 Bq/g, Ni-63 100 Bq/g, Fe-55 1000 Bq/g. Used for future waste classification plot overlays (Phase 4).",
+    "used_for": [
+      "clearance_levels"
+    ]
+  },
+  {
+    "id": "EUROfusion-EUROFER",
+    "tag": "literature",
+    "type": "journal",
+    "title": "EUROFER97: A Low Activation Ferritic-Martensitic Steel for Fusion Applications",
+    "authors": "R. Lindau et al.",
+    "journal": "Fusion Engineering and Design",
+    "year": 2005,
+    "doi": "10.1016/j.fusengdes.2005.06.033",
+    "notes": "EUROFER97 composition (9Cr-1W-0.2V-0.1Ta, balance Fe). Eliminates Ni, Mo, Nb, Cu intentionally for low activation. Enables shallow land burial within 50\u2013100 y cooling.",
+    "used_for": [
+      "EUROFER97_material"
+    ]
+  },
+  {
+    "id": "NNDC-NuDat3",
+    "tag": "ENDF",
+    "type": "database",
+    "title": "NuDat 3 \u2014 Nuclear Structure and Decay Data",
+    "authors": "National Nuclear Data Center (NNDC/BNL)",
+    "year": 2023,
+    "url": "https://www.nndc.bnl.gov/nudat3/",
+    "notes": "Online interface for decay data, gamma intensities, half-lives. Cross-checked against ENDF/B-VIII.0 for Co-60, Na-24, Eu-152, Eu-154, Cs-134, Sc-46, Ba-133, Zn-65 gamma lines; also used for Ag-110m, Ag-108m, Ta-182, Nb-94 decay data.",
+    "used_for": [
+      "decay_data",
+      "gamma_lines"
+    ]
+  },
+  {
+    "id": "Tanaka-Ag109-2003",
+    "tag": "measured",
+    "type": "journal",
+    "title": "Isomeric Cross Section Ratio for the (n,\u03b3) Reaction on \u00b9\u2070\u2079Ag at Thermal and 14.1 MeV Neutron Energies",
+    "authors": "M. Tanaka et al.",
+    "journal": "Journal of Nuclear Science and Technology",
+    "volume": 40,
+    "pages": "831\u2013836",
+    "year": 2003,
+    "notes": "Measured isomeric partial cross-section for Ag-109(n,\u03b3)\u2192Ag-110m at thermal energies: \u03c3_m = 4.12 \u00b1 0.10 b (total Ag-109 \u03c3_th \u2248 91 b; ~95% branches to short-lived Ag-110g). Primary source for Ag-110m cross-section used in Copper (OFHC) activation.",
+    "used_for": [
+      "Ag109_sigma_th_isomeric"
+    ]
+  },
+  {
+    "id": "VTT-Co-SS-2020",
+    "tag": "measured",
+    "type": "report",
+    "title": "Cobalt Content of Stainless Steels Used in Nuclear Power Plants",
+    "authors": "VTT Technical Research Centre of Finland",
+    "series": "VTT-R-00184-20",
+    "institution": "VTT Technical Research Centre of Finland",
+    "year": 2020,
+    "notes": "Measured Co content in commercial SS-304 and SS-316: range 1340\u20132570 ppm in commercial product, median ~1800 ppm. Nuclear-grade (low-Co SS) specifications: \u2264500 ppm (Sandmeyer 304CO), reactor-grade \u2264100 ppm. Basis for Co-59 impurity levels in SS-316 commercial vs nuclear-grade variants.",
+    "used_for": [
+      "Co_impurity_SS316_commercial",
+      "Co_impurity_SS316_nuclear"
+    ]
+  },
+  {
+    "id": "ASTM-B170-copper",
+    "tag": "literature",
+    "type": "standard",
+    "title": "ASTM B170 \u2014 Standard Specification for Oxygen-Free Electrolytic Copper \u2014 Refinery Shapes",
+    "authors": "ASTM International",
+    "series": "ASTM B170",
+    "year": 2021,
+    "url": "https://www.astm.org/b0170-99r21.html",
+    "notes": "Specifies composition limits for C10100 (OFE) copper: Ag \u226425 ppm, Zn \u22641 ppm. Corrects prior assumption of 10\u2013100 ppm Zn in OFHC Cu. At these limits, Ag-110m (from Ag-109(n,\u03b3)) dominates over Zn-65 as medium-term dose driver with ~85\u00d7 higher \u03c3\u00b7f at thermal energies.",
+    "used_for": [
+      "Cu_OFHC_composition",
+      "Zn_correction",
+      "Ag_impurity_Cu"
+    ]
+  },
+  {
+    "id": "Rieth-W-ITER-2015",
+    "tag": "literature",
+    "type": "journal",
+    "title": "Tungsten as a Structural Divertor Material",
+    "authors": "M. Rieth et al.",
+    "journal": "IOP Conference Series: Materials Science and Engineering",
+    "year": 2015,
+    "notes": "ITER-grade tungsten specification: Ta \u226450 ppm, Co \u22645\u201310 ppm, total metallic impurities \u2264100 ppm. Industrial W (lamp/HV grade): Ta up to 500 ppm. Ta-181(n,\u03b3)\u2192Ta-182 (\u03c3_th=20.5 b, t\u00bd=114.74 d) is the dominant medium-term activation product in W after the Re/Os chain. Basis for Ta-181 levels in Tungsten (ITER grade) and Tungsten (industrial) materials.",
+    "used_for": [
+      "W_ITER_composition",
+      "Ta_impurity_W"
+    ]
+  },
+  {
+    "id": "Lindau-EUROFER97-2005",
+    "tag": "literature",
+    "type": "journal",
+    "title": "EUROFER97: A Low Activation Ferritic-Martensitic Steel for Fusion Applications",
+    "authors": "R. Lindau, A. M\u00f6slang, M. Rieth et al.",
+    "journal": "Fusion Engineering and Design",
+    "year": 2005,
+    "doi": "10.1016/j.fusengdes.2005.06.033",
+    "notes": "Full characterization of EUROFER97 composition and activation properties. Demonstrates hands-on decommissioning achievable within 50\u2013100 y due to elimination of Ni, Mo, Nb, Cu. Dominant long-term products: Fe-55, Mn-54, Ta-182 from 0.1 wt% Ta alloying element. Basis for EUROFER97 material composition in data.py.",
+    "used_for": [
+      "EUROFER97_composition",
+      "reduced_activation_steel"
+    ]
+  },
+  {
+    "id": "OSTI-Ti-fusion-5171710",
+    "tag": "literature",
+    "type": "report",
+    "title": "Assessment of Titanium Alloys for Fusion Reactor First-Wall and Blanket Applications",
+    "authors": "ORNL staff",
+    "series": "OSTI 5171710",
+    "institution": "Oak Ridge National Laboratory",
+    "year": 1982,
+    "url": "https://www.osti.gov/biblio/5171710",
+    "notes": "Assessment of Ti alloys (including Ti-6Al-4V) for fusion applications. Identifies tramp impurities (Co, Ni, Ag, Nb) as detrimental for radiological properties. Residual activity dominated by Al-26 (t\u00bd=720 ky) at very long cooling times from Al-27(n,2n) at 14 MeV. Confirms reduced-activation character for 10\u2013100 y range.",
+    "used_for": [
+      "Ti-6Al-4V_activation",
+      "Ti_impurity_concerns"
+    ]
+  },
+  {
+    "id": "ORNL-TM-2008-137-Ti",
+    "tag": "literature",
+    "type": "report",
+    "title": "Survey of Radiation Effects in Titanium Alloys",
+    "authors": "ORNL staff",
+    "series": "ORNL/TM-2008/137",
+    "institution": "Oak Ridge National Laboratory",
+    "year": 2008,
+    "url": "https://info.ornl.gov/sites/publications/files/Pub12339.pdf",
+    "notes": "Survey of radiation damage and activation data for Ti alloys in fusion/nuclear environments. Covers Ti-6Al-4V, Ti-70A, and others. Confirms void swelling resistance and reduced activation. Na-24 from Al-27(n,\u03b1) identified as dominant early shutdown dose driver.",
+    "used_for": [
+      "Ti-6Al-4V_radiation_effects"
+    ]
+  },
+  {
+    "id": "WC-fusion-waste-2025",
+    "tag": "literature",
+    "type": "journal",
+    "title": "Performance characteristics and waste implications of WC materials used as neutron shielding materials in fusion",
+    "authors": "Various",
+    "journal": "Building and Environment / Fusion Engineering",
+    "year": 2025,
+    "url": "https://www.sciencedirect.com/science/article/abs/pii/S0263436825002458",
+    "notes": "Dedicated analysis of WC neutron shielding waste implications in fusion context. Co binder (3\u20136 wt%) identified as dominating activation; Fe-based low-activation binder alternatives evaluated. WC has lowest long-term activity among shielding grades without Co binder. Basis for WC-Co material entry and warning notes.",
+    "used_for": [
+      "WC_Co_activation",
+      "WC_waste_classification"
+    ]
+  },
+  {
+    "id": "Royal-Society-compact-tokamak-2018",
+    "tag": "literature",
+    "type": "journal",
+    "title": "Shielding materials in the compact spherical tokamak",
+    "authors": "Various",
+    "journal": "Philosophical Transactions of the Royal Society A",
+    "volume": 377,
+    "year": 2018,
+    "doi": "10.1098/rsta.2017.0443",
+    "url": "https://royalsocietypublishing.org/doi/10.1098/rsta.2017.0443",
+    "notes": "Systematic evaluation of shielding materials for compact fusion devices (ST design). WC, SS, and heavymet evaluated for combined n+\u03b3 attenuation. Ni content in heavymet alloys flagged as primary activation/waste concern for high-fluence applications.",
+    "used_for": [
+      "WC_shielding_applications",
+      "Heavymet_application_context"
+    ]
+  },
+  {
+    "id": "ANSI-ANS-6.4-concrete",
+    "tag": "literature",
+    "type": "standard",
+    "title": "Nuclear Analysis and Design of Concrete Radiation Shielding for Nuclear Power Plants",
+    "authors": "American Nuclear Society",
+    "series": "ANSI/ANS-6.4-2006",
+    "year": 2006,
+    "notes": "Standard concrete composition for radiation shielding analysis. Provides the canonical OPC concrete elemental weight fractions used in the OPC Concrete material entry: H 1.0%, O 52.91%, Na 1.60%, Mg 0.24%, Al 2.05%, Si 20.45%, K 1.92%, Ca 14.29%, Fe 3.44%, C 0.10%.",
+    "used_for": [
+      "OPC_concrete_composition"
+    ]
+  },
+  {
+    "id": "Shieldwerx-SWX-277",
+    "tag": "literature",
+    "type": "product_spec",
+    "title": "SWX-277 Kretekast Borated Concrete \u2014 Material Specification",
+    "authors": "Shieldwerx (MarShield)",
+    "year": 2023,
+    "url": "https://marshield.com",
+    "notes": "Kretekast SWX-277 MCNP material definition (m402). Weight fractions: H 4.9%, O 62.66%, B-10 0.308%, B-11 1.297%, N 0.01%, Na 0.13%, Al 21.45%, S 0.16%, Si 1.38%, Ca 6.56%, C 0.45%, Fe 0.27%. Density 1.68 g/cm\u00b3. High-alumina borated concrete. Composition provided directly by user from MCNP deck.",
+    "used_for": [
+      "Kretekast_composition"
+    ]
+  },
+  {
+    "id": "JET-Cu-activation-2019",
+    "tag": "measured",
+    "type": "journal",
+    "title": "Dose rates and specific activities of copper based materials irradiated during the TT plasma operation at JET",
+    "authors": "Various",
+    "journal": "Nuclear Materials and Energy",
+    "year": 2019,
+    "url": "https://www.sciencedirect.com/science/article/pii/S2352179119300687",
+    "notes": "JET measured activation of Al-Bronze and CuCrZr under D-T plasma neutrons. Confirms Cu-64 (12.7 h), Zn-65 (244 d) as primary early/medium products. Co-60 from Co impurity identified as dominant >1 y dose contributor. Relevant cross-validation for Cu OFHC activation model.",
+    "used_for": [
+      "Cu_activation_validation",
+      "JET_activation_data"
+    ]
+  },
+  {
+    "id": "NUREG-CR-6280",
+    "tag": "literature",
+    "type": "report",
+    "title": "Technology, Safety, and Costs of Decommissioning a Reference PWR Power Station",
+    "authors": "Pacific Northwest Laboratory for NRC",
+    "series": "NUREG/CR-6280 PNL-10167",
+    "institution": "Pacific Northwest Laboratory",
+    "year": 1997,
+    "url": "https://www.nrc.gov/docs/ML0225/ML022560193.pdf",
+    "notes": "PWR decommissioning reference. Documents A36 structural steel Co impurity levels (50\u20135000 ppm scrap-origin) and their impact on activated waste classification. Basis for A36 conservative Co=2000 ppm model. Also documents Cu residuals in scrap steel and their Zn-65 activation products.",
+    "used_for": [
+      "A36_impurity_levels",
+      "carbon_steel_activation"
+    ]
+  },
+  {
+    "id": "EPRI-Nb94-waste",
+    "tag": "literature",
+    "type": "report",
+    "title": "Radioactive Waste Management Guide for Nuclear Power Plant Decommissioning",
+    "authors": "Electric Power Research Institute",
+    "series": "EPRI TR-112352",
+    "year": 1999,
+    "notes": "Identifies Nb-94 (from Nb-93(n,\u03b3), t\u00bd=20,300 y) as most restrictive single isotope under NRC 10 CFR 61 for activated metal waste: Class C limit = 0.2 Ci/m\u00b3. Even trace Nb (50 ppm in SS-316) can drive waste classification if fluence is high. Used for Nb-93 impurity modeling in SS-316.",
+    "used_for": [
+      "Nb94_waste_classification",
+      "Nb_impurity_SS316"
+    ]
+  },
+  {
+    "id": "NRC-10CFR61",
+    "tag": "regulation",
+    "type": "regulation",
+    "title": "10 CFR Part 61: Licensing Requirements for Land Disposal of Radioactive Waste",
+    "authors": "U.S. Nuclear Regulatory Commission",
+    "journal": "Code of Federal Regulations",
+    "volume": "Title 10, Part 61",
+    "pages": null,
+    "year": 1982,
+    "doi": null,
+    "url": "https://www.ecfr.gov/current/title-10/chapter-I/part-61",
+    "source_db": "NRC",
+    "notes": "Primary US regulatory framework for near-surface LLW disposal. Table 1 sets concentration limits for shorter-lived isotopes (Class A/B/C); Table 2 sets Class C limits for longer-lived isotopes including Nb-94 (0.2 Ci/m\u00b3), C-14 (8 Ci/m\u00b3), Ni-59 (220 Ci/m\u00b3), Ni-63 (700 Ci/m\u00b3), Tc-99 (3 Ci/m\u00b3). Sum-of-fractions rule applies for mixed-isotope packages.",
+    "tags": [
+      "waste classification",
+      "LLW",
+      "disposal",
+      "regulation",
+      "Class C",
+      "GTCC"
+    ]
+  }
+]
