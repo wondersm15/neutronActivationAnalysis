@@ -1,191 +1,141 @@
-# Phase 3B — Nuclear Data Preprocessing Pipeline
+# Tools — Nuclear Data Pipeline
 
-This directory contains the three-stage pipeline for populating multi-library
-cross-section data into `data.py`.
+This directory contains the scripts for downloading and processing nuclear data
+used by the Neutron Activation Analysis app.
 
 ---
 
-## Prerequisites
+## Current Workflow (Recommended)
+
+The active data pipeline has two steps. Run these once after cloning to enable
+the Cross Sections tab and keep activation cross sections aligned with the
+plotted σ(E) curves.
+
+### Step 1 — Download pointwise σ(E) files
 
 ```bash
-pip install requests numpy
-pip install endf          # optional but recommended (endf-python package)
+# ENDF/B-VIII.0 (activation reactions + total cross sections)
+python tools/download_pointwise.py --library endf8 --include-total
+
+# FENDL-3.2c
+python tools/download_pointwise.py --library fendl32c --include-total
 ```
 
-If `endf-python` is not installed, the pipeline falls back to the built-in
-ENDF-6 reader (`lib/endf6_reader.py`), which handles all standard activation
-file formats using only numpy.
+Files are saved to `data/external/pointwise/<library>/` as JSON:
+`{Symbol}_{A}_n{MT}.json`, e.g. `Fe_56_n102.json`.
 
----
+Each file contains fully resonance-reconstructed σ(E) data at 294 K from the
+[openmc-data-storage](https://github.com/openmc-data-storage) GitHub org,
+covering ~1×10⁻⁵ eV to 150 MeV. These files are **not committed to the repo**
+(~95 MB per library) but are required for the Cross Sections tab to function.
 
-## Pipeline Overview
+**MT numbers used:**
 
-```
-Stage 1:  download_endf.py   →  data/external/<library>/  (ENDF-6 files)
-Stage 2:  preprocess.py      →  data/external/<library>_extracted.json
-Stage 3:  update_data.py     →  data.py  (cross_sections updated)
-```
+| Reaction  | MT  |
+|-----------|-----|
+| (n,γ)     | 102 |
+| (n,p)     | 103 |
+| (n,α)     | 107 |
+| (n,2n)    | 16  |
+| (n,total) | 1   |
 
----
-
-## Stage 1 — Download ENDF-6 Files
-
-Downloads one file per isotope from the official library sources.
-All 48 target isotopes from `REACTIONS` are downloaded.
+### Step 2 — Extract three-point cross sections
 
 ```bash
-# ENDF/B-VIII.0 (publicly accessible, no account needed)
+python tools/extract_pointwise_3pt.py
+```
+
+Reads the downloaded pointwise files and interpolates σ at three energies
+using log-log interpolation:
+
+| Field       | Energy     | Physical meaning                   |
+|-------------|------------|------------------------------------|
+| `sigma_th`  | 0.0253 eV  | Thermal (2200 m/s Maxwellian peak) |
+| `sigma_2p5` | 2.45 MeV   | D-D fusion neutron peak            |
+| `sigma_14`  | 14.1 MeV   | D-T fusion neutron peak            |
+
+Outputs `data/endf_3pt.json` and `data/fendl_3pt.json` (committed to the repo).
+These are loaded at app startup by `_load_extracted_3pt()` in `data.py`,
+overriding the hardcoded fallback values in `REACTIONS`.
+
+The script also prints a coverage report and flags any reactions where the
+extracted value differs from the hardcoded fallback by more than 200%.
+
+**Re-run Step 2 any time you:**
+- Download a new library
+- Add a new isotope or reaction to `data.py`
+
+---
+
+## Files in This Directory
+
+| File                       | Role                                                          |
+|----------------------------|---------------------------------------------------------------|
+| `download_pointwise.py`    | **Current** — downloads pointwise σ(E) JSON from openmc-data |
+| `extract_pointwise_3pt.py` | **Current** — interpolates 3-point values, writes JSON files  |
+| `lib/endf6_reader.py`      | Pure-Python ENDF-6 MF3 parser (used by legacy pipeline)      |
+| `download_endf.py`         | **Legacy** — downloads raw ENDF-6 files                       |
+| `preprocess.py`            | **Legacy** — extracts 3-point values from ENDF-6 files        |
+| `update_data.py`           | **Legacy** — patches `data.py` cross_sections in-place        |
+| `README.md`                | This file                                                     |
+
+---
+
+## Legacy Pipeline (Superseded)
+
+The original pipeline downloaded raw ENDF-6 formatted files and parsed them
+with a custom reader, then patched `data.py` directly. It is preserved for
+reference but is no longer the recommended path.
+
+The current pipeline is preferred because:
+- Pointwise JSON files serve double duty for σ(E) plots and activation cross
+  sections — the plotted curve and the computed value are guaranteed identical
+- FENDL-3.2c is available through the same source with no extra steps
+- The old pipeline patched `data.py` in-place; the new one writes separate JSON
+  files that are loaded at runtime, keeping `data.py` clean
+
+If you need the legacy pipeline (e.g. for a library not available via openmc-data):
+
+```bash
 python tools/download_endf.py --library endf8
-
-# Validate URL patterns first (fast, no full download)
-python tools/download_endf.py --library endf8 --validate
-
-# TENDL-2023 (also public)
-python tools/download_endf.py --library tendl23
-
-# JENDL-5.0 (public from JAEA)
-python tools/download_endf.py --library jendl5
-
-# JEFF-3.3 (may need NEA Data Bank registration)
-python tools/download_endf.py --library jeff33
-
-# EAF-2010 — MANUAL: download FISPACT-II data package from NEA
-#   https://www.oecd-nea.org/tools/abstract/detail/nea-1609
-#   Extract 'xs' directory → data/external/eaf10/
-
-# Dry run to see what would be downloaded
-python tools/download_endf.py --library endf8 --dry-run
-
-# Download all public libraries
-python tools/download_endf.py --library endf8 tendl23 jendl5
-```
-
-Files go to `data/external/<library>/` (or `$ACTIVATION_DATA_DIR/<library>/`).
-
-### File naming conventions
-
-| Library  | Filename pattern           | Example             |
-|----------|---------------------------|---------------------|
-| endf8    | `n-{ZZZ}_{Sym}_{AAA}.endf` | `n-027_Co_059.endf` |
-| jeff33   | `n-{ZZZ}_{Sym}_{AAA}.jeff33` | `n-027_Co_059.jeff33` |
-| jendl5   | `n-{ZZZ}_{Sym}_{AAA}.jendl5` | `n-027_Co_059.jendl5` |
-| tendl23  | `{Sym}{AAA}.tendl`         | `Co059.tendl`       |
-| eaf10    | `{sym}{A}.eaf`             | `co59.eaf`          |
-
----
-
-## Stage 2 — Preprocess (Extract 3-Point Values)
-
-Reads the downloaded ENDF-6 files and evaluates each cross-section at:
-
-| Point      | Energy       | Purpose                                  |
-|------------|-------------|------------------------------------------|
-| sigma_th   | 0.0253 eV   | Thermal (2200 m/s, Maxwellian peak)      |
-| sigma_2p5  | 2.5 MeV     | D-D neutron peak / fission spectrum      |
-| sigma_14   | 14.1 MeV    | D-T fusion neutron peak                  |
-
-```bash
-# Extract ENDF/B-VIII.0 values
-python tools/preprocess.py --library endf8
-
-# Extract and validate against existing data.py values
 python tools/preprocess.py --library endf8 --validate
-
-# Verbose (print extracted values for every isotope)
-python tools/preprocess.py --library endf8 --verbose
-
-# JEFF-3.3
-python tools/preprocess.py --library jeff33
-```
-
-Output: `data/external/endf8_extracted.json`
-
-The `--validate` flag compares extracted sigma_th and sigma_14 against existing
-`data.py` values and flags discrepancies >20%. This is the Phase 3C validation
-step — review any flagged entries to decide whether to update data.py.
-
----
-
-## Stage 3 — Update data.py
-
-Patches `cross_sections` dicts in `data.py` with the extracted values.
-
-**Default mode**: only fills `sigma_2p5: None` placeholders. Existing `sigma_th`
-and `sigma_14` values (which have been manually validated) are not overwritten.
-
-```bash
-# Dry run first — show what would change
 python tools/update_data.py --json data/external/endf8_extracted.json --dry-run
-
-# Apply sigma_2p5 values
 python tools/update_data.py --json data/external/endf8_extracted.json
-
-# Add a new library (e.g. JEFF-3.3) to every cross_sections block
-python tools/update_data.py --json data/external/jeff33_extracted.json --add-library
-
-# Override existing values too (use carefully — validate discrepancies first)
-python tools/update_data.py --json data/external/endf8_extracted.json --update-existing
 ```
 
-A backup of `data.py` is written automatically before patching
-(`data.py.bak-<library>`). A change log is saved to `data_update_<library>.json`.
-
----
-
-## Full Workflow Example — Populating sigma_2p5 from ENDF/B-VIII.0
-
-```bash
-# 1. Download all 48 isotope files
-python tools/download_endf.py --library endf8
-
-# 2. Extract 3-point values and validate against data.py
-python tools/preprocess.py --library endf8 --validate --verbose
-
-# 3. Review discrepancies (if any)
-cat data/external/endf8_discrepancies.json
-
-# 4. Dry-run the update
-python tools/update_data.py --json data/external/endf8_extracted.json --dry-run
-
-# 5. Apply
-python tools/update_data.py --json data/external/endf8_extracted.json
-
-# 6. Run the app and verify
-python app.py
-```
+A backup `data.py.bak-<library>` is written automatically before patching.
 
 ---
 
 ## Adding a New Nuclear Library
 
-Once JEFF-3.3 files are downloaded:
+1. Check whether pointwise files are available via openmc-data-storage. If so,
+   add a new entry to `LIBRARY_CONFIG` in `download_pointwise.py` and download.
 
-```bash
-python tools/preprocess.py --library jeff33 --validate
-python tools/update_data.py --json data/external/jeff33_extracted.json --add-library
-```
+2. Run `extract_pointwise_3pt.py` — update `LIBRARIES` and `OUTPUT_FILES` dicts
+   at the top of the script to include the new library key and output path.
 
-Then in `index.html`, enable the jeff33 `<option>` (remove the `disabled` attribute).
+3. In `data.py`, update `_FILE_MAP` inside `_load_extracted_3pt()` to read the
+   new JSON file and merge into `REACTIONS` under the new library key.
 
----
+4. In `app.py`, add the new library to `_LIBRARY_SUBDIR` and `_LIBRARY_LABEL`.
 
-## Data Directory
-
-By default, ENDF files are read from `./data/external/`. Override with:
-
-```bash
-export ACTIVATION_DATA_DIR=/path/to/your/nuclear_data
-python tools/preprocess.py --library endf8
-```
+5. In `templates/index.html`, add an `<option value="newlib">` to `#inp-library`.
 
 ---
 
-## Files in this Directory
+## Data Directory Layout (after running the pipeline)
 
-| File                    | Purpose                                          |
-|-------------------------|--------------------------------------------------|
-| `download_endf.py`      | Stage 1: download ENDF-6 files                   |
-| `preprocess.py`         | Stage 2: extract 3-point cross-sections          |
-| `update_data.py`        | Stage 3: patch data.py cross_sections            |
-| `lib/endf6_reader.py`   | Pure-Python ENDF-6 MF3 parser (no ext. deps)    |
-| `README.md`             | This file                                        |
+```
+data/
+├── endf_3pt.json               ← committed; generated by extract_pointwise_3pt.py
+├── fendl_3pt.json              ← committed; generated by extract_pointwise_3pt.py
+└── external/                   ← git-ignored; created by download_pointwise.py
+    └── pointwise/
+        ├── endf8/              ← ENDF/B-VIII.0 pointwise σ(E) files (~125 files)
+        │   ├── Fe_56_n102.json
+        │   ├── Fe_56_n16.json
+        │   └── ...
+        └── fendl32c/           ← FENDL-3.2c pointwise σ(E) files (~120 files)
+            └── ...
+```
