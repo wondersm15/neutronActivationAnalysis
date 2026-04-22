@@ -58,9 +58,15 @@ documentation fallbacks. At module startup, `_load_extracted_3pt()` reads
 `data/endf_3pt.json` and `data/fendl_3pt.json` and overwrites them in-memory.
 Do not edit the hardcoded values expecting them to take effect at runtime.
 
-**`MATERIALS`** — maps material name (e.g. `"Stainless Steel 316 (nuclear grade)"`)
+**`MATERIALS`** — maps material name (e.g. `"Stainless Steel 316 (nuclear-grade impurities)"`)
 to a dict with `description`, `density_g_cc`, `category`, `isotopes` (atom fractions),
-and optionally `impurities`.
+and optionally `impurities`. Materials are named with an explicit impurity tag: `(baseline)`
+indicates the pure-composition idealization with no trace impurities modeled; `(with impurities)`,
+`(commercial-grade impurities)`, `(nuclear-grade impurities)`, `(ITER-grade impurities)`, or
+`(industrial impurities)` indicate variants that include trace activation drivers (Co, Eu, Nb,
+Cs, Sc, etc.) at representative levels. Several materials have both a `(baseline)` and a
+`(... impurities)` variant — they are deliberate pairs for bracketing activation predictions,
+not duplicates to be deduplicated.
 
 **`_load_extracted_3pt()`** — runs once at import time. Merges the extracted JSON
 files into `REACTIONS`. Safe to re-run (idempotent).
@@ -209,8 +215,20 @@ See `tools/README.md` → "Adding a New Nuclear Library". Requires changes in fo
 
 **No persistent state**: the app has no database. Everything is computed on the fly from the in-memory `data.py` structures. The "cache" variables in `index.html` (`currentCompute`, `gammaComputeCache`) are browser session state only.
 
-**Activation model is single-pulse**: `compute_activation` assumes one instantaneous neutron pulse. Pulsed operation (multiple shots) is not yet modeled — each shot would require superposition of shifted decay curves.
+**Activation model is single-pulse — correct-by-design for ≤ns irradiation**: `compute_activation` treats the irradiation as one instantaneous pulse depositing the full fluence Φ. For the intended use case (~1 ns neutron pulses from pulsed-power drivers), this is physically correct, not an approximation: the pulse duration is many orders of magnitude shorter than the shortest half-life in the database, so no appreciable decay occurs during irradiation and the "instantaneous" idealization is exact. For repeated pulses, activity from each shot can be superposed as time-shifted exponentials on the same decay curves; the single-shot response is the building block.
 
 **Products merged by nuclide**: if Fe-56 can be activated to Mn-56 via both (n,p) and some other path, the activities are summed before plotting. This matches how a detector would measure it.
 
 **Log-log interpolation for σ(E)**: nuclear cross sections vary over many orders of magnitude; linear interpolation between tabulated points would introduce large errors in the resonance region. The pointwise files have dense enough energy grids that log-log linear interpolation between adjacent points is accurate.
+
+---
+
+## Known Limitations
+
+**Daughter chains are not modeled.** Each activation product decays independently on its own λ. If product A decays to daughter B with a different half-life and dose coefficient (e.g., Mo-99 → Tc-99m → Tc-99), the code does not carry forward B's activity or its gamma contribution. For most activation products this is a small effect because either the daughter is stable, the daughter is very short-lived compared to the parent (so its activity equals the parent's and its own gammas are already folded into the measured spectrum), or the daughter's dose coefficient is comparable to the parent's. It matters for any product whose daughter has a substantially different half-life and a strong gamma signature — flag for case-by-case review.
+
+**Impurity coverage is literature-representative, not measured.** Trace-element atom fractions in `MATERIALS` (Co, Eu, Nb, Cs, Sc in steels, concretes, and tungsten) come from published ranges for the relevant grade (ORNL/SCK-CEN/ITER documents), not vendor spec sheets or ICP-MS analysis of specific lots. For Kretekast the trace impurities are labelled PLACEHOLDER in-code because no SWX-277 measurement has been provided yet. Activation predictions at 1 y cooling and beyond are dominated by these trace impurities, so order-of-magnitude agreement is the right expectation until vendor data is obtained. Marked as future work in the TODO block at the top of `data.py`.
+
+**Hardcoded cross_sections drift.** The per-reaction `cross_sections` dicts in `REACTIONS` are a human-readable documentation fallback — they do not feed the compute path at runtime (that's `_load_extracted_3pt()` from the pointwise JSON). A reconciliation sweep in `tools/check_hardcoded_vs_runtime.py` and the pytest in `tests/test_cross_sections.py` guard against the hardcoded values silently drifting more than 1% from the authoritative pointwise runtime values. Run the sweep after any edit that touches `cross_sections` dicts.
+
+**ICRP-74 dose conversion at low energy.** The H*(10)/Φ coefficient table in `physics.py` is the standard ICRP-74 ambient dose equivalent table. Log-log interpolation below ~10 keV is less well-constrained than above it; any product whose dominant gammas sit in the low-keV range is a candidate for cross-check against a more modern evaluation. Marked as future work in the TODO block at the top of `data.py`.

@@ -31,6 +31,38 @@ import json
 import os as _os
 
 # ---------------------------------------------------------------------------
+# Known limitations / TODOs
+#
+# Impurity coverage (priority: medium)
+#   Most trace-impurity compositions in MATERIALS are literature-representative
+#   (ASTM spec maxima, vendor typicals, published mill assays) rather than
+#   measured by ICP-MS on the specific material lots in use. For Kretekast /
+#   SWX-277 borated concrete the Eu / Co / Cs / Sc lines are labeled
+#   "PLACEHOLDER" in the descriptions and should be replaced with vendor or
+#   ICP-MS data before the predicted dose rates for that material are trusted
+#   quantitatively.  Other "(... impurities)" variants should be audited the
+#   same way when measured compositions become available.
+#
+# Dose conversion at low energy (priority: low)
+#   physics.py uses ICRP-74 H*(10)/Φ coefficients with log-log interpolation.
+#   The tabulated grid thins out below ~10 keV, where soft photons contribute
+#   little to H*(10) but the interpolated coefficient is easy to misread off
+#   the table. Worth re-deriving the low-energy end from the ICRP-74 primary
+#   source and adding a unit test anchored on a few well-known spot values.
+#
+# Material composition sums (priority: low — within tolerance)
+#   Five materials have atom-fraction sums that drift from 1.0 by <0.1%.
+#   These are within the spec-sheet rounding of their source data and do not
+#   affect activation predictions at the precision we report, but should be
+#   renormalized on the next data pass:
+#     Tungsten (industrial impurities)       1.0004
+#     LAC Concrete (Limestone)               1.0002
+#     Heavymet (90W-7Ni-3Fe)                 1.0002
+#     EUROFER97                              0.9997
+#     Tantalum (pure)                        0.9999
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 # Activation reaction database
 # Each entry: target isotope → list of reactions
 #
@@ -60,7 +92,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Al-28",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.231, "sigma_2p5": 0.0004559, "sigma_14": 0.0006312},
+                "endf8": {"sigma_th": 0.2335, "sigma_2p5": 0.0004615, "sigma_14": 0.0006312},
             },
             "threshold":   None,        # exothermic
             "t_half":      "2.245 min",
@@ -73,7 +105,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Mg-27",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 1.906e-05, "sigma_14": 0.07228},
+                "endf8": {"sigma_th": None, "sigma_2p5": 1.53e-05, "sigma_14": 0.07228},
             },
             "threshold":   1.83,
             "t_half":      "9.458 min",
@@ -99,7 +131,7 @@ REACTIONS = {
             "reaction":    "(n,2n)",
             "product":     "Al-26",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.006753},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.006582},
             },
             "threshold":   13.06,
             "t_half":      "7.17×10⁵ y",
@@ -118,7 +150,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cr-55",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.36, "sigma_2p5": 0.000928, "sigma_14": 0.0005471},
+                "endf8": {"sigma_th": 0.4111, "sigma_2p5": 0.000928, "sigma_14": 0.0005471},
             },
             "threshold":   None,
             "t_half":      "3.497 min",
@@ -151,7 +183,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Mn-54",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 0.06484, "sigma_14": 0.3389},
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.05899, "sigma_14": 0.3389},
             },
             "threshold":   0.93,
             "t_half":      "312.20 d",
@@ -164,7 +196,7 @@ REACTIONS = {
             "reaction":    "(n,α)",
             "product":     "Cr-51",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.015},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.003737},
             },
             "threshold":   0.27,
             "t_half":      "27.704 d",
@@ -179,7 +211,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Fe-57",
             "cross_sections": {
-                "endf8": {"sigma_th": 2.59, "sigma_2p5": 0.001735, "sigma_14": 0.0007956},
+                "endf8": {"sigma_th": 2.59, "sigma_2p5": 0.001714, "sigma_14": 0.0007956},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -235,7 +267,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Fe-59",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.28, "sigma_2p5": 0.001786, "sigma_14": 0.001154},
+                "endf8": {"sigma_th": 1.314, "sigma_2p5": 0.001786, "sigma_14": 0.001154},
             },
             "threshold":   None,
             "t_half":      "44.496 d",
@@ -254,7 +286,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cr-51",
             "cross_sections": {
-                "endf8": {"sigma_th": 15.9, "sigma_2p5": 0.002768, "sigma_14": 0.001068},
+                "endf8": {"sigma_th": 15.4, "sigma_2p5": 0.002768, "sigma_14": 0.001068},
             },
             "threshold":   None,
             "t_half":      "27.704 d",
@@ -269,7 +301,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cr-53",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.114, "sigma_2p5": 0.001036, "sigma_14": 0.0008026},
+                "endf8": {"sigma_th": 0.8558, "sigma_2p5": 0.001047, "sigma_14": 0.0008026},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -311,7 +343,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cr-54",
             "cross_sections": {
-                "endf8": {"sigma_th": 18.1, "sigma_2p5": 0.0009698, "sigma_14": 0.0009489},
+                "endf8": {"sigma_th": 18.1, "sigma_2p5": 0.0009892, "sigma_14": 0.0009489},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -330,7 +362,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Co-58",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 0.1014, "sigma_14": 0.3432},
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.09277, "sigma_14": 0.3432},
             },
             "threshold":   0.40,
             "t_half":      "70.86 d",
@@ -343,7 +375,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ni-59",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.517, "sigma_2p5": 0.003405, "sigma_14": 0.0008569},
+                "endf8": {"sigma_th": 4.225, "sigma_2p5": 0.003435, "sigma_14": 0.0008569},
             },
             "threshold":   None,
             "t_half":      "7.6×10⁴ y",
@@ -370,7 +402,7 @@ REACTIONS = {
             "reaction":    "(n,α)",
             "product":     "Fe-55",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 0.00305, "sigma_14": 0.1053},
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.002711, "sigma_14": 0.1053},
             },
             "threshold":   None,        # Q > 0; Coulomb barrier suppresses thermal rate to negligible
             "t_half":      "2.737 y",
@@ -385,7 +417,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ni-61",
             "cross_sections": {
-                "endf8": {"sigma_th": 2.9, "sigma_2p5": 0.003135, "sigma_14": 0.0009003},
+                "endf8": {"sigma_th": 2.4, "sigma_2p5": 0.003179, "sigma_14": 0.0009003},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -398,7 +430,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Co-60",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 1.997e-13, "sigma_14": 0.1571},
+                "endf8": {"sigma_th": None, "sigma_2p5": 9.957e-14, "sigma_14": 0.1571},
             },
             "threshold":   2.08,        # MeV; Q ≈ −2.04 MeV → threshold = 2.04×61/60 = 2.08 MeV
             "t_half":      "5.2714 y",
@@ -430,7 +462,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ni-65",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.52, "sigma_2p5": 0.001657, "sigma_14": 0.0005163},
+                "endf8": {"sigma_th": 1.48, "sigma_2p5": 0.001674, "sigma_14": 0.0005163},
             },
             "threshold":   None,
             "t_half":      "2.5175 h",
@@ -446,7 +478,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ni-63",
             "cross_sections": {
-                "endf8": {"sigma_th": 14.5, "sigma_2p5": 0.002879, "sigma_14": 0.0007241},
+                "endf8": {"sigma_th": 14.9, "sigma_2p5": 0.00299, "sigma_14": 0.0007241},
             },
             "threshold":   None,
             "t_half":      "100.1 y",
@@ -466,7 +498,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mn-56",
             "cross_sections": {
-                "endf8": {"sigma_th": 13.3, "sigma_2p5": 0.001506, "sigma_14": 0.0006239},
+                "endf8": {"sigma_th": 13.3, "sigma_2p5": 0.001548, "sigma_14": 0.0006239},
             },
             "threshold":   None,
             "t_half":      "2.579 h",
@@ -492,7 +524,7 @@ REACTIONS = {
             "reaction":    "(n,α)",
             "product":     "V-52",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.025},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.00124},
             },
             "threshold":   0.70,        # MeV
             "t_half":      "3.743 min",
@@ -511,7 +543,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cu-64",
             "cross_sections": {
-                "endf8": {"sigma_th": 4.5, "sigma_2p5": 0.00533, "sigma_14": 0.0007202},
+                "endf8": {"sigma_th": 4.5, "sigma_2p5": 0.005495, "sigma_14": 0.0007202},
             },
             "threshold":   None,
             "t_half":      "12.701 h",
@@ -537,7 +569,7 @@ REACTIONS = {
             "reaction":    "(n,α)",
             "product":     "Co-60",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 1.615e-06, "sigma_14": 0.04399},
+                "endf8": {"sigma_th": None, "sigma_2p5": 1.316e-06, "sigma_14": 0.04399},
             },
             "threshold":   5.04,
             "t_half":      "5.272 y",
@@ -553,7 +585,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cu-66",
             "cross_sections": {
-                "endf8": {"sigma_th": 2.17, "sigma_2p5": 0.003869, "sigma_14": 0.0006114},
+                "endf8": {"sigma_th": 2.17, "sigma_2p5": 0.003939, "sigma_14": 0.0006114},
             },
             "threshold":   None,
             "t_half":      "5.120 min",
@@ -579,7 +611,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Ni-65",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 6.662e-07, "sigma_14": 0.01975},
+                "endf8": {"sigma_th": None, "sigma_2p5": 4.356e-07, "sigma_14": 0.01975},
             },
             "threshold":   2.13,        # MeV — estimated
             "t_half":      "2.5175 h",
@@ -598,7 +630,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "W-181",
             "cross_sections": {
-                "endf8": {"sigma_th": 21.7, "sigma_2p5": 0.1015, "sigma_14": 0.0007032},
+                "endf8": {"sigma_th": 29.65, "sigma_2p5": 0.1058, "sigma_14": 0.0007032},
             },
             "threshold":   None,
             "t_half":      "121.2 d",
@@ -615,7 +647,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "W-183",
             "cross_sections": {
-                "endf8": {"sigma_th": 20.7, "sigma_2p5": 0.05631, "sigma_14": 0.000696},
+                "endf8": {"sigma_th": 20.31, "sigma_2p5": 0.05906, "sigma_14": 0.000696},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -644,7 +676,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "W-184",
             "cross_sections": {
-                "endf8": {"sigma_th": 10.1, "sigma_2p5": 0.03098, "sigma_14": 0.001884},
+                "endf8": {"sigma_th": 9.869, "sigma_2p5": 0.03208, "sigma_14": 0.001884},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -659,7 +691,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "W-185",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.7, "sigma_2p5": 0.03178, "sigma_14": 0.000703},
+                "endf8": {"sigma_th": 1.635, "sigma_2p5": 0.03304, "sigma_14": 0.000703},
             },
             "threshold":   None,
             "t_half":      "75.1 d",
@@ -687,7 +719,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "W-187",
             "cross_sections": {
-                "endf8": {"sigma_th": 37.9, "sigma_2p5": 0.02479, "sigma_14": 0.001366},
+                "endf8": {"sigma_th": 37.9, "sigma_2p5": 0.02542, "sigma_14": 0.001366},
             },
             "threshold":   None,
             "t_half":      "23.72 h",
@@ -719,7 +751,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Co-60",
             "cross_sections": {
-                "endf8": {"sigma_th": 37.2, "sigma_2p5": 0.512, "sigma_14": 0.0027},
+                "endf8": {"sigma_th": 37.2, "sigma_2p5": 0.002162, "sigma_14": 0.001168},
             },
             "threshold":   None,
             "t_half":      "5.2714 y",
@@ -737,7 +769,7 @@ REACTIONS = {
             "reaction":    "(n,2n)",
             "product":     "Co-58",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.708},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.689},
             },
             "threshold":   10.00,       # MeV
             "t_half":      "70.82 d",
@@ -751,7 +783,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Fe-59",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.017},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.05022},
             },
             "threshold":   1.21,        # MeV
             "t_half":      "44.495 d",
@@ -809,7 +841,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Eu-152",
             "cross_sections": {
-                "endf8": {"sigma_th": 5900, "sigma_2p5": 0.1247, "sigma_14": 0.000775},
+                "endf8": {"sigma_th": 9183, "sigma_2p5": 0.1301, "sigma_14": 0.000775},
             },
             "threshold":   None,
             "t_half":      "13.517 y",
@@ -818,9 +850,9 @@ REACTIONS = {
             "gammas":      [[121.782, 28.37], [344.279, 26.57], [1408.006, 21.01],
                             [778.904, 12.97], [1112.076, 13.67], [964.079, 14.63],
                             [1085.837, 10.21], [244.698,  7.51]],
-            "notes":       "ENDF: σ_th≈5900 b (2200 m/s); resonance integral ~3300 b. "
-                           "literature (Kinno et al. 2007) quotes ~9200 b — likely Maxwellian avg or RI; "
-                           "flag for cross-check against JEFF-3.3. "
+            "notes":       "ENDF/B-VIII.0 pointwise at 0.0253 eV: σ_th=9183 b (matches Kinno et al. 2007 "
+                           "~9200 b literature value). Older tabulated summaries of 5900 b are from "
+                           "earlier evaluations — do not use. Resonance integral ~3300 b. "
                            "THE critical trace-element activation product in concrete: 0.5–2 ppm Eu in OPC "
                            "dominates dose at 5–50 y post-shutdown. IAEA clearance: 0.1 Bq/g. "
                            "Eu-151 is 47.81% naturally abundant.",
@@ -847,7 +879,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Eu-154",
             "cross_sections": {
-                "endf8": {"sigma_th": 312, "sigma_2p5": 0.09889, "sigma_14": 0.001036},
+                "endf8": {"sigma_th": 357.9, "sigma_2p5": 0.1015, "sigma_14": 0.001036},
             },
             "threshold":   None,
             "t_half":      "8.593 y",
@@ -871,7 +903,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Cs-134",
             "cross_sections": {
-                "endf8": {"sigma_th": 29, "sigma_2p5": 0.01681, "sigma_14": 0.0009667},
+                "endf8": {"sigma_th": 29, "sigma_2p5": 0.01701, "sigma_14": 0.0009667},
             },
             "threshold":   None,
             "t_half":      "2.0652 y",
@@ -894,7 +926,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Sc-46",
             "cross_sections": {
-                "endf8": {"sigma_th": 27.2, "sigma_2p5": 0.001572, "sigma_14": 0.0002321},
+                "endf8": {"sigma_th": 27.2, "sigma_2p5": 0.001605, "sigma_14": 0.0002321},
             },
             "threshold":   None,
             "t_half":      "83.790 d",
@@ -916,7 +948,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ba-133",
             "cross_sections": {
-                "endf8": {"sigma_th": 7, "sigma_2p5": 0.3115, "sigma_14": 0.003696},
+                "endf8": {"sigma_th": 6.53, "sigma_2p5": 0.3115, "sigma_14": 0.003696},
             },
             "threshold":   None,
             "t_half":      "10.511 y",
@@ -940,7 +972,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Nb-92m",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 0.00117, "sigma_14": 0.1256},
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.0009899, "sigma_14": 0.1256},
             },
             "threshold":   2.26,        # MeV (Q ≈ −2.24 MeV; threshold = 2.24 × 93/92)
             "t_half":      "10.15 d",
@@ -957,7 +989,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mo-99",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.13, "sigma_2p5": 0.01571, "sigma_14": 0.001007},
+                "endf8": {"sigma_th": 0.13, "sigma_2p5": 0.01642, "sigma_14": 0.001007},
             },
             "threshold":   None,
             "t_half":      "65.94 h",
@@ -975,7 +1007,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mo-101",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.199, "sigma_2p5": 0.01024, "sigma_14": 0.001152},
+                "endf8": {"sigma_th": 0.199, "sigma_2p5": 0.01037, "sigma_14": 0.001152},
             },
             "threshold":   None,
             "t_half":      "14.61 min",
@@ -995,7 +1027,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Nb-94",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.15, "sigma_2p5": 0.0083, "sigma_14": 0.000554},
+                "endf8": {"sigma_th": 1.15, "sigma_2p5": 0.008563, "sigma_14": 0.000554},
             },
             "threshold":   None,
             "t_half":      "2.03×10⁴ y",
@@ -1036,7 +1068,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ag-108m",
             "cross_sections": {
-                "endf8": {"sigma_th": 35, "sigma_2p5": 0.06437, "sigma_14": 7.778e-05},
+                "endf8": {"sigma_th": 37.6, "sigma_2p5": 0.06562, "sigma_14": 7.778e-05},
             },
             "threshold":   None,
             "t_half":      "438 y",
@@ -1057,7 +1089,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ag-110m",
             "cross_sections": {
-                "endf8": {"sigma_th": 4.12, "sigma_2p5": 0.03602, "sigma_14": 0.000865},
+                "endf8": {"sigma_th": 90.24, "sigma_2p5": 0.03696, "sigma_14": 0.000865},
             },
             "threshold":   None,
             "t_half":      "249.83 d",
@@ -1087,7 +1119,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ta-182",
             "cross_sections": {
-                "endf8": {"sigma_th": 20.5, "sigma_2p5": 0.07592, "sigma_14": 0.001173},
+                "endf8": {"sigma_th": 21.12, "sigma_2p5": 0.08002, "sigma_14": 0.001173},
             },
             "threshold":   None,
             "t_half":      "114.74 d",
@@ -1115,7 +1147,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Sc-47",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 0.02052, "sigma_14": 0.145},
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.01944, "sigma_14": 0.145},
             },
             "threshold":   0.60,
             "t_half":      "3.349 d",
@@ -1228,7 +1260,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ca-49",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.09, "sigma_2p5": 0.0002372, "sigma_14": 0.0008658},
+                "endf8": {"sigma_th": 1.09, "sigma_2p5": 0.0002308, "sigma_14": 0.0008658},
             },
             "threshold":   None,
             "t_half":      "8.718 min",
@@ -1250,7 +1282,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "K-42",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.5155, "sigma_2p5": 0.001758, "sigma_14": 9.504e-06},
+                "endf8": {"sigma_th": 1.461, "sigma_2p5": 0.001814, "sigma_14": 9.504e-06},
             },
             "threshold":   None,
             "t_half":      "12.360 h",
@@ -1270,7 +1302,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "C-14",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.827, "sigma_2p5": 0.01655, "sigma_14": 0.04389},
+                "endf8": {"sigma_th": 1.827, "sigma_2p5": 0.0141, "sigma_14": 0.04389},
             },
             "threshold":   None,        # exothermic
             "t_half":      "5730 y",
@@ -1309,7 +1341,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Si-31",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.107, "sigma_2p5": 0.0008563, "sigma_14": 0.000605},
+                "endf8": {"sigma_th": 0.107, "sigma_2p5": 0.0008829, "sigma_14": 0.000605},
             },
             "threshold":   None,
             "t_half":      "157.3 min",
@@ -1354,7 +1386,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Zn-65",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.793, "sigma_2p5": 0.006743, "sigma_14": 0.0009949},
+                "endf8": {"sigma_th": 0.793, "sigma_2p5": 0.006978, "sigma_14": 0.0009949},
             },
             "threshold":   None,
             "t_half":      "243.93 d",
@@ -1372,7 +1404,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Cu-64",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": 0.02594, "sigma_14": 0.1709},
+                "endf8": {"sigma_th": None, "sigma_2p5": 0.02289, "sigma_14": 0.1709},
             },
             "threshold":   2.37,        # MeV
             "t_half":      "12.701 h",
@@ -1392,7 +1424,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "H-2",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.3326, "sigma_2p5": 1.6e-4, "sigma_14": 9.8e-5},
+                "endf8": {"sigma_th": 0.3326, "sigma_2p5": 3.73e-05, "sigma_14": 2.952e-05},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1409,7 +1441,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "H-3",
             "cross_sections": {
-                "endf8": {"sigma_th": 5.19e-4, "sigma_2p5": 1.6e-6, "sigma_14": 5.5e-5},
+                "endf8": {"sigma_th": 0.0005057, "sigma_2p5": 8.413e-06, "sigma_14": 9.472e-06},
             },
             "threshold":   None,
             "t_half":      "12.32 y",
@@ -1432,7 +1464,7 @@ REACTIONS = {
             "reaction":    "(n,α)",
             "product":     "Li-7",
             "cross_sections": {
-                "endf8": {"sigma_th": 3840.0, "sigma_2p5": 0.227, "sigma_14": 0.1},
+                "endf8": {"sigma_th": 3840.0, "sigma_2p5": 0.2848, "sigma_14": 0.04448},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1448,7 +1480,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "B-11",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.5, "sigma_2p5": 1.0e-3, "sigma_14": 1.0e-3},
+                "endf8": {"sigma_th": 0.3961, "sigma_2p5": 5.688e-05, "sigma_14": 1.912e-05},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1463,7 +1495,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "B-12",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.0055, "sigma_2p5": 5.0e-4, "sigma_14": 3.5e-3},
+                "endf8": {"sigma_th": 0.0055, "sigma_2p5": 3.508e-06, "sigma_14": 2.14e-07},
             },
             "threshold":   None,
             "t_half":      "20.2 ms",
@@ -1483,7 +1515,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "C-13",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.00353, "sigma_2p5": 1.6e-5, "sigma_14": 3.0e-5},
+                "endf8": {"sigma_th": 0.003862, "sigma_2p5": 5.003e-05, "sigma_14": 0.0001202},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1498,7 +1530,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "C-14",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.37e-3, "sigma_2p5": 5.0e-6, "sigma_14": 1.5e-5},
+                "endf8": {"sigma_th": 0.001501, "sigma_2p5": 7.708e-06, "sigma_14": 3.919e-05},
             },
             "threshold":   None,
             "t_half":      "5730 y",
@@ -1522,7 +1554,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ca-41",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.41, "sigma_2p5": 5.0e-4, "sigma_14": 4.0e-4},
+                "endf8": {"sigma_th": 0.41, "sigma_2p5": 0.001514, "sigma_14": 0.0004087},
             },
             "threshold":   None,
             "t_half":      "1.03e5 y",
@@ -1539,7 +1571,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ca-43",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.68, "sigma_2p5": 1.0e-3, "sigma_14": 6.0e-4},
+                "endf8": {"sigma_th": 0.68, "sigma_2p5": 0.001878, "sigma_14": 0.001047},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1554,7 +1586,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ca-44",
             "cross_sections": {
-                "endf8": {"sigma_th": 6.2, "sigma_2p5": 5.0e-3, "sigma_14": 1.0e-3},
+                "endf8": {"sigma_th": 11.66, "sigma_2p5": 0.001174, "sigma_14": 0.001847},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1569,7 +1601,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ca-45",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.88, "sigma_2p5": 1.5e-3, "sigma_14": 4.5e-4},
+                "endf8": {"sigma_th": 0.88, "sigma_2p5": 0.0007692, "sigma_14": 0.001379},
             },
             "threshold":   None,
             "t_half":      "162.67 d",
@@ -1589,7 +1621,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "K-40",
             "cross_sections": {
-                "endf8": {"sigma_th": 2.1, "sigma_2p5": 3.0e-3, "sigma_14": 2.0e-3},
+                "endf8": {"sigma_th": 2.127, "sigma_2p5": 0.000494, "sigma_14": 1.255e-06},
             },
             "threshold":   None,
             "t_half":      "1.248e9 y",
@@ -1612,7 +1644,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mg-25",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.0505, "sigma_2p5": 1.5e-4, "sigma_14": 1.2e-4},
+                "endf8": {"sigma_th": 0.0505, "sigma_2p5": 0.0001176, "sigma_14": 3.27e-05},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1625,7 +1657,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Na-24",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.189},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.1966},
             },
             "threshold":   4.93,
             "t_half":      "14.957 h",
@@ -1642,7 +1674,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mg-26",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.190, "sigma_2p5": 5.0e-4, "sigma_14": 2.0e-4},
+                "endf8": {"sigma_th": 0.190, "sigma_2p5": 0.0001368, "sigma_14": 6.695e-06},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1657,7 +1689,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mg-27",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.0382, "sigma_2p5": 1.5e-4, "sigma_14": 1.0e-4},
+                "endf8": {"sigma_th": 0.0382, "sigma_2p5": 0.0001789, "sigma_14": 2.012e-05},
             },
             "threshold":   None,
             "t_half":      "9.458 min",
@@ -1677,7 +1709,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mo-95",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.020, "sigma_2p5": 8.0e-4, "sigma_14": 3.0e-4},
+                "endf8": {"sigma_th": 0.3403, "sigma_2p5": 0.03037, "sigma_14": 0.001004},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1690,7 +1722,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Nb-94",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.065},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.05374},
             },
             "threshold":   5.5,
             "t_half":      "2.03e4 y",
@@ -1709,7 +1741,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mo-96",
             "cross_sections": {
-                "endf8": {"sigma_th": 13.4, "sigma_2p5": 0.020, "sigma_14": 2.0e-3},
+                "endf8": {"sigma_th": 13.4, "sigma_2p5": 0.01964, "sigma_14": 0.0008938},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1725,7 +1757,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mo-97",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.50, "sigma_2p5": 3.0e-3, "sigma_14": 5.0e-4},
+                "endf8": {"sigma_th": 0.5954, "sigma_2p5": 0.01696, "sigma_14": 0.001002},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1740,7 +1772,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Mo-98",
             "cross_sections": {
-                "endf8": {"sigma_th": 2.5, "sigma_2p5": 8.0e-3, "sigma_14": 1.0e-3},
+                "endf8": {"sigma_th": 2.196, "sigma_2p5": 0.01231, "sigma_14": 1.0e-3},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1759,7 +1791,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ni-62",
             "cross_sections": {
-                "endf8": {"sigma_th": 2.5, "sigma_2p5": 5.0e-3, "sigma_14": 2.0e-3},
+                "endf8": {"sigma_th": 2.5, "sigma_2p5": 0.001835, "sigma_14": 0.0009813},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1778,7 +1810,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "O-19",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.6e-4, "sigma_2p5": 5.0e-7, "sigma_14": 2.0e-6},
+                "endf8": {"sigma_th": 0.0001542, "sigma_2p5": 4.286e-05, "sigma_14": 0.0011},
             },
             "threshold":   None,
             "t_half":      "26.9 s",
@@ -1799,7 +1831,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "P-32",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.172, "sigma_2p5": 5.0e-4, "sigma_14": 2.0e-4},
+                "endf8": {"sigma_th": 0.1694, "sigma_2p5": 0.0009637, "sigma_14": 0.0002983},
             },
             "threshold":   None,
             "t_half":      "14.268 d",
@@ -1820,7 +1852,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Pb-205",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.65, "sigma_2p5": 4.0e-3, "sigma_14": 1.5e-3},
+                "endf8": {"sigma_th": 0.6608, "sigma_2p5": 0.004084, "sigma_14": 0.002227},
             },
             "threshold":   None,
             "t_half":      "1.53e7 y",
@@ -1834,7 +1866,7 @@ REACTIONS = {
             "reaction":    "(n,2n)",
             "product":     "Pb-203",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.0},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.194},
             },
             "threshold":   7.88,
             "t_half":      "51.873 h",
@@ -1851,7 +1883,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Pb-207m",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.030, "sigma_2p5": 2.0e-4, "sigma_14": 5.0e-4},
+                "endf8": {"sigma_th": 0.030, "sigma_2p5": 0.0005003, "sigma_14": 0.001081},
             },
             "threshold":   None,
             "t_half":      "0.806 s",
@@ -1867,7 +1899,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Pb-208",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.699, "sigma_2p5": 2.0e-3, "sigma_14": 8.0e-4},
+                "endf8": {"sigma_th": 0.7119, "sigma_2p5": 0.002063, "sigma_14": 0.00131},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1882,7 +1914,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Pb-209",
             "cross_sections": {
-                "endf8": {"sigma_th": 4.7e-4, "sigma_2p5": 3.0e-6, "sigma_14": 3.0e-4},
+                "endf8": {"sigma_th": 0.0002321, "sigma_2p5": 0.001035, "sigma_14": 0.001113},
             },
             "threshold":   None,
             "t_half":      "3.253 h",
@@ -1897,7 +1929,7 @@ REACTIONS = {
             "reaction":    "(n,2n)",
             "product":     "Pb-207",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.3},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 2.223},
             },
             "threshold":   7.36,
             "t_half":      "Stable",
@@ -1917,7 +1949,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "S-33",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.54, "sigma_2p5": 1.5e-3, "sigma_14": 2.0e-4},
+                "endf8": {"sigma_th": 0.5282, "sigma_2p5": 0.0001862, "sigma_14": 3.069e-06},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1932,7 +1964,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "S-34",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.46, "sigma_2p5": 1.5e-3, "sigma_14": 2.0e-4},
+                "endf8": {"sigma_th": 0.3501, "sigma_2p5": 0.0001313, "sigma_14": 6.714e-07},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1947,7 +1979,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "S-35",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.23, "sigma_2p5": 5.0e-4, "sigma_14": 1.5e-4},
+                "endf8": {"sigma_th": 0.2236, "sigma_2p5": 0.0001769, "sigma_14": 3.444e-06},
             },
             "threshold":   None,
             "t_half":      "87.51 d",
@@ -1967,7 +1999,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Si-30",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.101, "sigma_2p5": 3.0e-4, "sigma_14": 1.5e-4},
+                "endf8": {"sigma_th": 0.12, "sigma_2p5": 5.019e-05, "sigma_14": 1.5e-4},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1986,7 +2018,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ti-47",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.59, "sigma_2p5": 2.0e-3, "sigma_14": 1.0e-3},
+                "endf8": {"sigma_th": 0.59, "sigma_2p5": 0.002682, "sigma_14": 0.001106},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -1999,7 +2031,7 @@ REACTIONS = {
             "reaction":    "(n,p)",
             "product":     "Sc-46",
             "cross_sections": {
-                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.020},
+                "endf8": {"sigma_th": None, "sigma_2p5": None, "sigma_14": 0.2893},
             },
             "threshold":   3.65,
             "t_half":      "83.79 d",
@@ -2017,7 +2049,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Ti-50",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.80, "sigma_2p5": 5.0e-3, "sigma_14": 2.0e-3},
+                "endf8": {"sigma_th": 1.862, "sigma_2p5": 0.001162, "sigma_14": 0.0004997},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -2036,7 +2068,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "V-51",
             "cross_sections": {
-                "endf8": {"sigma_th": 60.0, "sigma_2p5": 0.20, "sigma_14": 0.05},
+                "endf8": {"sigma_th": 44.68, "sigma_2p5": 0.0005193, "sigma_14": 0.0009356},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -2057,7 +2089,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Zn-67",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.62, "sigma_2p5": 3.0e-3, "sigma_14": 5.0e-4},
+                "endf8": {"sigma_th": 0.62, "sigma_2p5": 0.008563, "sigma_14": 0.0008957},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -2072,7 +2104,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Zn-68",
             "cross_sections": {
-                "endf8": {"sigma_th": 6.9, "sigma_2p5": 0.020, "sigma_14": 2.0e-3},
+                "endf8": {"sigma_th": 7.47, "sigma_2p5": 0.003067, "sigma_14": 0.0009653},
             },
             "threshold":   None,
             "t_half":      "Stable",
@@ -2087,7 +2119,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Zn-69m",
             "cross_sections": {
-                "endf8": {"sigma_th": 1.0, "sigma_2p5": 4.0e-3, "sigma_14": 6.0e-4},
+                "endf8": {"sigma_th": 1.065, "sigma_2p5": 0.005324, "sigma_14": 0.0007845},
             },
             "threshold":   None,
             "t_half":      "13.756 h",
@@ -2105,7 +2137,7 @@ REACTIONS = {
             "reaction":    "(n,γ)",
             "product":     "Zn-71m",
             "cross_sections": {
-                "endf8": {"sigma_th": 0.092, "sigma_2p5": 3.0e-4, "sigma_14": 2.0e-4},
+                "endf8": {"sigma_th": 0.092, "sigma_2p5": 0.001075, "sigma_14": 0.0007097},
             },
             "threshold":   None,
             "t_half":      "3.97 h",
@@ -2156,13 +2188,13 @@ MATERIALS = {
             "S-32": 4.781e-04, "S-33": 0.00000, "S-34": 0.00003,
         },
     },
-    "Stainless Steel 304": {
+    "Stainless Steel 304 (with impurities)": {
         "category":    "steel",
         "description": "AISI 304 stainless steel — commercial grade with typical Co impurity (~1500 ppm). "
                        "Nominal: 72 wt% Fe, 18 wt% Cr, 8 wt% Ni, 2 wt% Mn + Co-59 at 1500 ppm. "
                        "Atom fractions from wt% → atom% conversion (AME2020/IUPAC 2021). "
                        "Co impurity modeled explicitly — critical for meaningful long-term dose estimates. "
-                       "For nuclear-grade low-Co SS, use SS-316 (nuclear grade) entry.",
+                       "For nuclear-grade low-Co SS, use 'Stainless Steel 316 (nuclear-grade impurities)' entry.",
         "impurities": {
             "Co": {"ppm_range": [90, 2570], "significance": "CRITICAL",
                    "note": "Co-59(n,γ)→Co-60 (t½=5.27 y) is the #1 long-term dose driver in SS — "
@@ -2203,13 +2235,68 @@ MATERIALS = {
             "Co-59": 0.00140799,
         },
     },
-    "Stainless Steel 316 (commercial)": {
+    "Stainless Steel 316 (baseline)": {
+        "category":    "steel",
+        "description": "AISI 316 stainless steel — BASELINE (no impurities modeled). "
+                       "Full ASTM A240 spec-max composition: 65 wt% Fe (+ 0.595% balance), "
+                       "17 wt% Cr, 12 wt% Ni, 2.5 wt% Mo, 2 wt% Mn, plus spec-max traces "
+                       "C (≤0.08%), Si (≤0.75%), P (≤0.045%), S (≤0.030%). "
+                       "Co and Nb impurities are NOT included. "
+                       "Use as a clean lower-bound reference; for realistic activation see "
+                       "'Stainless Steel 316 (commercial-grade impurities)' or "
+                       "'Stainless Steel 316 (nuclear-grade impurities)'. "
+                       "Atom fractions: wt% → atom% (AME2020/IUPAC 2021). Sum = 1.",
+        "impurities": {},
+        "density_g_cc": 7.98,
+        "isotopes": {
+            # Iron (65.595 wt% → 65.10 atom%)
+            "Fe-54": 0.0380527,
+            "Fe-56": 0.5973455,
+            "Fe-57": 0.0137953,
+            "Fe-58": 0.0018359,
+            # Chromium (17 wt% → 18.12 atom%)
+            "Cr-50": 0.0078738,
+            "Cr-52": 0.1518379,
+            "Cr-53": 0.0172172,
+            "Cr-54": 0.0042857,
+            # Nickel (12 wt% → 11.33 atom%)
+            "Ni-58": 0.0771453,
+            "Ni-60": 0.0297161,
+            "Ni-61": 0.0012919,
+            "Ni-62": 0.0041181,
+            "Ni-64": 0.0010493,
+            # Molybdenum (2.5 wt% → 1.44 atom%)
+            "Mo-92": 0.0020983,
+            "Mo-94": 0.0013214,
+            "Mo-95": 0.0022875,
+            "Mo-96": 0.0024074,
+            "Mo-97": 0.0013864,
+            "Mo-98": 0.0035223,
+            "Mo-100": 0.0014181,
+            # Manganese (2 wt% → 2.02 atom%)
+            "Mn-55": 0.0201777,
+            # Carbon (≤0.08 wt% → 0.37 atom%; spec-max)
+            "C-12": 0.0036522,
+            "C-13": 0.0000395,
+            # Silicon (≤0.75 wt% → 1.48 atom%; spec-max)
+            "Si-28": 0.0136498,
+            "Si-29": 0.0006934,
+            "Si-30": 0.0004576,
+            # Phosphorus (≤0.045 wt% → 0.08 atom%; spec-max)
+            "P-31": 0.0008052,
+            # Sulfur (≤0.030 wt% → 0.052 atom%; spec-max)
+            "S-32": 0.0004926,
+            "S-33": 0.0000039,
+            "S-34": 0.0000220,
+        },
+    },
+    "Stainless Steel 316 (commercial-grade impurities)": {
         "category":    "steel",
         "description": "AISI 316 stainless steel — commercial grade. Nominal: 65 wt% Fe, 17 wt% Cr, "
                        "12 wt% Ni, 2.5 wt% Mo, 2 wt% Mn + Co at ~1500 ppm + Nb at ~50 ppm. "
                        "Mo addition (cf. SS-304) provides pitting corrosion resistance. "
                        "Co-59 modeled explicitly at commercial typical level (~1500 ppm). "
-                       "For comparison with nuclear-grade, see SS-316 (nuclear grade) entry. "
+                       "For comparison with nuclear-grade, see 'Stainless Steel 316 (nuclear-grade impurities)' entry. "
                        "Atom fractions: wt% → atom% (AME2020/IUPAC 2021).",
         "impurities": {
             "Co": {"ppm_range": [90, 2570], "significance": "CRITICAL",
@@ -2255,10 +2342,10 @@ MATERIALS = {
             "Nb-93": 0.0000307,
         },
     },
-    "Stainless Steel 316 (nuclear grade)": {
+    "Stainless Steel 316 (nuclear-grade impurities)": {
         "category":    "steel",
         "description": "AISI 316 stainless steel — nuclear/low-Co grade. Identical bulk composition to "
-                       "SS-316 (commercial) but Co ≤100 ppm (Sandmeyer 304CO-type specification; "
+                       "SS-316 (commercial-grade impurities) but Co ≤100 ppm (Sandmeyer 304CO-type specification; "
                        "special melt practices, scrap-free raw Ni). Nb modeled at 20 ppm (scrap-free melt). "
                        "Demonstrates the large reduction in long-term dose achievable through material selection. "
                        "References: Sandmeyer Steel 304CO spec (≤500 ppm Co); EPRI TR-112352 (low-Co practices).",
@@ -2273,7 +2360,7 @@ MATERIALS = {
         },
         "density_g_cc": 7.98,
         "isotopes": {
-            # Fe, Cr, Ni, Mo, Mn — identical to SS-316 (commercial)
+            # Fe, Cr, Ni, Mo, Mn — identical to SS-316 (commercial-grade impurities)
             "Fe-54": 0.0387121,
             "Fe-56": 0.607429,
             "Fe-57": 0.01400,
@@ -2359,7 +2446,27 @@ MATERIALS = {
             "Ag-109": 0.00000707,
         },
     },
-    "Tungsten (ITER grade)": {
+    "Tungsten (baseline)": {
+        "category":    "metal",
+        "description": "Pure tungsten — BASELINE (no impurities modeled). Natural W isotopics (IUPAC 2021). "
+                       "Ta and Co impurities are NOT included. "
+                       "Use as a clean lower-bound reference; for realistic impurity modeling see "
+                       "'Tungsten (ITER-grade impurities)' (~50 ppm Ta, ≤5 ppm Co) or "
+                       "'Tungsten (industrial impurities)' (~300 ppm Ta, ~30 ppm Co). "
+                       "NOTE: even in 'baseline' W the intrinsic W→Re→Os transmutation chain under "
+                       "DT neutron flux is not a trace-impurity issue; it is inherent to W and is "
+                       "currently not modeled (Phase 4 multi-step decay chain work).",
+        "impurities": {},
+        "density_g_cc": 19.30,
+        "isotopes": {
+            "W-180": 0.0012,
+            "W-182": 0.2650,
+            "W-183": 0.1431,
+            "W-184": 0.3064,
+            "W-186": 0.2843,
+        },
+    },
+    "Tungsten (ITER-grade impurities)": {
         "category":    "metal",
         "description": "Pure tungsten — ITER specification grade. Used in pulsed power electrodes and "
                        "plasma-facing components. Natural W isotopics (IUPAC 2021) + Ta-181 and Co-59 "
@@ -2398,7 +2505,7 @@ MATERIALS = {
             "Co-59": 0.0000156,
         },
     },
-    "Tungsten (industrial)": {
+    "Tungsten (industrial impurities)": {
         "category":    "metal",
         "description": "Pure tungsten — industrial/commercial grade (not fusion-spec). "
                        "Ta modeled at 300 ppm, Co at 30 ppm (typical industrial range). "
@@ -2520,7 +2627,31 @@ MATERIALS = {
         },
     },
 
-    "Carbon Steel (A36)": {
+    "Carbon Steel A36 (baseline)": {
+        "category":    "steel",
+        "description": "ASTM A36 structural carbon steel — BASELINE (no impurities modeled). "
+                       "Nominal bulk: 98.5 wt% Fe, 1.5 wt% Mn. "
+                       "C/Si traces and all impurities (Co, Cu, Ni, Nb) are NOT included. "
+                       "Use as a clean lower-bound reference; for realistic activation including "
+                       "scrap-origin Co/Cu/Ni impurities use 'Carbon Steel A36 (with impurities)'.",
+        "impurities": {
+            "Co": {"ppm_range": [93, 151], "significance": "documented, not modeled",
+                   "note": "Co-59(n,γ)→Co-60 is the long-term dose driver in any real A36. "
+                           "Not included in this baseline; see (with impurities) variant for modeling."},
+        },
+        "density_g_cc": 7.85,
+        "isotopes": {
+            # Iron (98.5 wt% → 98.48 atom%)
+            "Fe-54": 0.05756,
+            "Fe-56": 0.90355,
+            "Fe-57": 0.02087,
+            "Fe-58": 0.00278,
+            # Manganese (1.5 wt% → 1.52 atom%)
+            "Mn-55": 0.01524,
+        },
+    },
+
+    "Carbon Steel A36 (with impurities)": {
         "category":    "steel",
         "description": "ASTM A36 structural carbon steel — conservative scrap-origin impurity model. "
                        "Bulk: 98.5 wt% Fe, 1.0 wt% Mn, 0.25 wt% C, 0.40 wt% Si. "
@@ -2777,8 +2908,9 @@ MATERIALS = {
             # Carbon (0.1 wt% → 0.147 atom%)
             "C-12": 0.001453, "C-13": 0.000016,
             # TRACE IMPURITIES — activation-critical (from literature: SCK-CEN, ORNL)
-            # Europium — 1 ppm by weight → f ≈ 1.16e-7; Eu-151 (47.81%) = 5.56e-8
-            "Eu-151": 0.0000001, "Eu-153": 0.0000001,
+            # Europium — 1 ppm by weight → f_total ≈ 1.163e-7
+            # Split by natural abundance: Eu-151 (47.81%) = 5.56e-8, Eu-153 (52.19%) = 6.07e-8
+            "Eu-151": 5.56e-8, "Eu-153": 6.07e-8,
             # Cobalt — 15 ppm → f ≈ 4.49e-6
             "Co-59": 0.0000045,
             # Cesium — 5 ppm → f ≈ 6.65e-7
@@ -2949,7 +3081,10 @@ MATERIALS = {
                        "ACTIVATION NOTE: Al-27(n,α)→Na-24 from 21 wt% Al dominates early shutdown "
                        "dose (much more than in OPC due to high Al content). "
                        "N-14(n,p)→C-14 (0.01 wt% N) is a long-term LLW waste concern. "
-                       "Same Eu/Co trace impurity concerns as OPC — composition-dependent.",
+                       "Same Eu/Co trace impurity concerns as OPC — composition-dependent. "
+                       "CAVEAT: Eu/Co/Cs/Sc atom fractions are PLACEHOLDERS (OPC-level proxies, "
+                       "not measured for SWX-277). Treat long-term (>1 y) activation predictions "
+                       "as order-of-magnitude until vendor or ICP-MS data is obtained.",
         "impurities": {
             "Eu": {"ppm_range": [0.5, 2], "significance": "CRITICAL",
                    "note": "Eu-151(n,γ)→Eu-152 (13.5 y). Al-aggregate concretes may differ from "
@@ -2984,12 +3119,16 @@ MATERIALS = {
             # Carbon — 0.45 wt% (natural C)
             "C-12": 0.003714, "C-13": 0.000040,
             # Iron — 0.27 wt% (natural Fe)
-            "Fe-54": 0.000028, "Fe-56": 0.000444, "Fe-57": 0.000010,
-            # TRACE IMPURITIES (conservative OPC-level until measured)
-            "Eu-151": 0.0000001, "Eu-153": 0.0000001,
-            "Co-59": 0.0000045,
-            "Cs-133": 0.0000007,
-            "Sc-45": 0.0000039,
+            "Fe-54": 0.000028, "Fe-56": 0.000444, "Fe-57": 0.000010, "Fe-58": 0.0000014,
+            # TRACE IMPURITIES — PLACEHOLDER VALUES (not based on measurement or vendor spec)
+            # Aluminate-aggregate concretes differ chemically from Portland cement; the Eu/Co/Cs/Sc
+            # values below are inherited from OPC as a conservative stand-in until Shieldwerx or an
+            # independent ICP-MS analysis provides SWX-277 measured impurity levels. Treat any
+            # Eu-152/Co-60/Cs-134/Sc-46 activation results from Kretekast as order-of-magnitude only.
+            "Eu-151": 0.0000001, "Eu-153": 0.0000001,  # PLACEHOLDER (OPC proxy, unvalidated)
+            "Co-59": 0.0000045,                        # PLACEHOLDER (OPC proxy, unvalidated)
+            "Cs-133": 0.0000007,                       # PLACEHOLDER (OPC proxy, unvalidated)
+            "Sc-45": 0.0000039,                        # PLACEHOLDER (OPC proxy, unvalidated)
         },
     },
 }
@@ -3164,7 +3303,56 @@ def _load_extracted_3pt():
                 rxn_entry["cross_sections"][lib_key] = existing
 
 
+def _check_no_duplicate_material_keys():
+    """
+    Guard against accidental duplicate MATERIALS dict keys in the source file.
+    Python dicts silently drop earlier duplicates — this guard parses data.py
+    as text and warns loudly if any key appears more than once.
+
+    We AST-parse the source to locate the MATERIALS = {...} assignment and
+    walk its keys. Runs once at module import, right after _load_extracted_3pt.
+    """
+    import ast as _ast
+    try:
+        _src_path = _os.path.abspath(__file__)
+        with open(_src_path) as _f:
+            _tree = _ast.parse(_f.read())
+    except Exception as _e:
+        import warnings as _warnings
+        _warnings.warn(f"data.py: duplicate-key guard could not parse source: {_e}",
+                       RuntimeWarning, stacklevel=2)
+        return
+
+    for _node in _ast.walk(_tree):
+        if not isinstance(_node, _ast.Assign):
+            continue
+        _targets = [t.id for t in _node.targets if isinstance(t, _ast.Name)]
+        if "MATERIALS" not in _targets:
+            continue
+        if not isinstance(_node.value, _ast.Dict):
+            continue
+        _keys = []
+        for _k in _node.value.keys:
+            if isinstance(_k, _ast.Constant) and isinstance(_k.value, str):
+                _keys.append(_k.value)
+        _seen = {}
+        _dupes = []
+        for _k in _keys:
+            _seen[_k] = _seen.get(_k, 0) + 1
+            if _seen[_k] == 2:
+                _dupes.append(_k)
+        if _dupes:
+            import warnings as _warnings
+            _warnings.warn(
+                "data.py: duplicate MATERIALS keys detected (later entries silently "
+                "overwrite earlier ones):\n  " + "\n  ".join(_dupes),
+                RuntimeWarning, stacklevel=2,
+            )
+        break
+
+
 _load_extracted_3pt()
+_check_no_duplicate_material_keys()
 
 
 def get_material_activation(material_name, library="endf8"):

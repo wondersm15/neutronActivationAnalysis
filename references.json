@@ -220,7 +220,7 @@
     "authors": "M. Rieth et al.",
     "journal": "IOP Conference Series: Materials Science and Engineering",
     "year": 2015,
-    "notes": "ITER-grade tungsten specification: Ta \u226450 ppm, Co \u22645\u201310 ppm, total metallic impurities \u2264100 ppm. Industrial W (lamp/HV grade): Ta up to 500 ppm. Ta-181(n,\u03b3)\u2192Ta-182 (\u03c3_th=20.5 b, t\u00bd=114.74 d) is the dominant medium-term activation product in W after the Re/Os chain. Basis for Ta-181 levels in Tungsten (ITER grade) and Tungsten (industrial) materials.",
+    "notes": "ITER-grade tungsten specification: Ta \u226450 ppm, Co \u22645\u201310 ppm, total metallic impurities \u2264100 ppm. Industrial W (lamp/HV grade): Ta up to 500 ppm. Ta-181(n,\u03b3)\u2192Ta-182 (\u03c3_th=20.5 b, t\u00bd=114.74 d) is the dominant medium-term activation product in W after the Re/Os chain. Basis for Ta-181 levels in Tungsten (ITER-grade impurities) and Tungsten (industrial impurities) materials.",
     "used_for": [
       "W_ITER_composition",
       "Ta_impurity_W"
