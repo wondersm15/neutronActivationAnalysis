@@ -1728,7 +1728,7 @@ REACTIONS = {
             "t_half":      "2.03e4 y",
             "t_half_s":    6.40e11,
             "decay_mode":  "β⁻",
-            "gammas":      [[702.63, 99.81], [871.09, 99.90]],
+            "gammas":      [[871.09, 99.90], [702.63, 99.81]],
             "notes":       "Mo-94(n,p)→Nb-94 at 14 MeV. σ_14≈0.065 b. CRITICAL LLW concern: "
                            "t½=20,300 y, two near-100% gammas. NRC Class C limit = 0.2 Ci/m³ — "
                            "among the most restrictive. Activated SS-316 Mo-content can approach "
@@ -2037,7 +2037,7 @@ REACTIONS = {
             "t_half":      "83.79 d",
             "t_half_s":    7.239e6,
             "decay_mode":  "β⁻",
-            "gammas":      [[889.28, 99.98], [1120.55, 99.99]],
+            "gammas":      [[1120.55, 99.99], [889.28, 99.98]],
             "notes":       "Ti-46(n,p)→Sc-46 at 14 MeV. σ_14≈0.020 b. Two near-100% gammas "
                            "make Sc-46 a notable medium-term dose contributor in Ti-rich materials. "
                            "Ti-46(n,p) is the dominant fast-neutron activation path in Ti alloys "
