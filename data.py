@@ -2191,8 +2191,9 @@ MATERIALS = {
     "Stainless Steel 304 (with impurities)": {
         "category":    "steel",
         "description": "AISI 304 stainless steel — commercial grade with typical Co impurity (~1500 ppm). "
-                       "Nominal: 72 wt% Fe, 18 wt% Cr, 8 wt% Ni, 2 wt% Mn + Co-59 at 1500 ppm. "
-                       "Atom fractions from wt% → atom% conversion (AME2020/IUPAC 2021). "
+                       "Full ASTM A240 spec-max composition (Fe, Cr, Ni, Mn, Si, C, P, S) identical to "
+                       "SS-304 (baseline), plus Co-59 at ~1500 ppm (commercial grade). "
+                       "Atom fractions derived from baseline vector + Co-59, renormalized to sum=1. "
                        "Co impurity modeled explicitly — critical for meaningful long-term dose estimates. "
                        "For nuclear-grade low-Co SS, use 'Stainless Steel 316 (nuclear-grade impurities)' entry.",
         "impurities": {
@@ -2211,28 +2212,40 @@ MATERIALS = {
         },
         "density_g_cc": 7.93,
         "isotopes": {
-            # Iron (72 wt% → ~70.8 atom% after Co adjustment)
-            "Fe-54": 0.0416205,
-            "Fe-56": 0.653306,
-            "Fe-57": 0.0150884,
-            "Fe-58": 0.00200713,
-            # Chromium (18 wt% → 19.0 atom%)
-            "Cr-50": 0.00830812,
-            "Cr-52": 0.160191,
-            "Cr-53": 0.018164,
-            "Cr-54": 0.00452353,
-            # Nickel (8 wt% → 7.5 atom%; all 5 stable isotopes)
-            "Ni-58": 0.0512467,
-            "Ni-60": 0.0197418,
-            "Ni-61": 8.588e-04,
-            "Ni-62": 0.00273609,
-            "Ni-64": 0.00070,
-            # Manganese (2 wt% → 2.0 atom%; Mn-55 = 100% natural abundance)
-            "Mn-55": 0.0201013,
+            # Full ASTM A240 SS-304 bulk composition — identical to baseline vector, renormalized with Co-59
+            # Iron (72 wt% → ~69.7 atom%)
+            "Fe-56": 0.6374854,
+            "Fe-54": 0.0406127,
+            "Fe-57": 0.0147231,
+            "Fe-58": 0.0019585,
+            # Chromium (18 wt% → 17.5 atom%)
+            "Cr-52": 0.1564288,
+            "Cr-53": 0.0177437,
+            "Cr-50": 0.0081167,
+            "Cr-54": 0.004414,
+            # Nickel (8 wt% → 6.8 atom%)
+            "Ni-58": 0.0499765,
+            "Ni-60": 0.0192442,
+            "Ni-62": 0.0026698,
+            "Ni-61": 0.000838,
+            "Ni-64": 0.000699,
+            # Manganese (2 wt% → 1.97 atom%)
+            "Mn-55": 0.019634,
+            # Silicon (≤0.75 wt% → 1.95 atom%)
+            "Si-28": 0.0177046,
+            "Si-29": 0.0008964,
+            "Si-30": 0.0005944,
+            # Carbon (≤0.08 wt% → 0.39 atom%)
+            "C-12": 0.003537,
+            "C-13": 3.99e-05,
+            # Phosphorus (≤0.045 wt% → 0.08 atom%)
+            "P-31": 0.0007698,
+            # Sulfur (≤0.030 wt% → 0.05 atom%)
+            "S-32": 0.0004774,
+            "S-34": 3e-05,
+            "S-33": 3.9e-06,
             # Cobalt impurity — CRITICAL: modeled at ~1500 ppm (commercial SS-304)
-            # f_Co59 ≈ 0.0015/58.933 / (sum_of_all_moles) ≈ 1.40×10⁻³
-            # (sum ≈ 0.018079 mol/g → f_Co59 = 2.546e-5/0.018079 ≈ 1.41e-3)
-            "Co-59": 0.00140799,
+            "Co-59": 0.001406,
         },
     },
     "Stainless Steel 316 (baseline)": {
@@ -2308,38 +2321,50 @@ MATERIALS = {
         },
         "density_g_cc": 7.98,
         "isotopes": {
-            # Iron (65 wt% → 66.1 atom%)
-            "Fe-54": 0.038659,
-            "Fe-56": 0.606595,
-            "Fe-57": 0.01400,
-            "Fe-58": 0.00186139,
-            # Chromium (17 wt% → 18.6 atom%)
-            "Cr-50": 0.00807605,
-            "Cr-52": 0.155667,
-            "Cr-53": 0.0176532,
-            "Cr-54": 0.00439329,
-            # Nickel (12 wt% → 11.6 atom%)
-            "Ni-58": 0.0790692,
-            "Ni-60": 0.0304428,
-            "Ni-61": 0.00132099,
-            "Ni-62": 0.00422316,
-            "Ni-64": 0.0010708,
-            # Molybdenum (2.5 wt% → 1.48 atom%)
-            "Mo-92": 0.00215161,
-            "Mo-94": 0.00136102,
-            "Mo-95": 0.00234175,
-            "Mo-96": 0.00246184,
-            "Mo-97": 0.00142106,
-            "Mo-98": 0.00361271,
-            "Mo-100": 0.00145109,
-            # Manganese (2 wt% → 2.07 atom%)
-            "Mn-55": 0.0206755,
+            # Full ASTM A240 SS-316 bulk composition — identical to baseline vector, renormalized with Co-59 + Nb-93
+            # Iron (65 wt% → ~64.5 atom%)
+            "Fe-56": 0.5964617,
+            "Fe-54": 0.0379964,
+            "Fe-57": 0.0137749,
+            "Fe-58": 0.0018332,
+            # Chromium (17 wt% → ~17.4 atom%)
+            "Cr-52": 0.1516133,
+            "Cr-53": 0.0171917,
+            "Cr-50": 0.0078622,
+            "Cr-54": 0.0042794,
+            # Nickel (12 wt% → ~11.5 atom%)
+            "Ni-58": 0.0770312,
+            "Ni-60": 0.0296721,
+            "Ni-62": 0.004112,
+            "Ni-61": 0.00129,
+            "Ni-64": 0.0010477,
+            # Molybdenum (2.5 wt% → ~1.47 atom%)
+            "Mo-98": 0.0035171,
+            "Mo-96": 0.0024038,
+            "Mo-95": 0.0022841,
+            "Mo-92": 0.0020952,
+            "Mo-100": 0.001416,
+            "Mo-97": 0.0013843,
+            "Mo-94": 0.0013194,
+            # Manganese (2 wt% → ~2.05 atom%)
+            "Mn-55": 0.0201478,
+            # Silicon (≤0.75 wt% → ~1.48 atom%)
+            "Si-28": 0.0136296,
+            "Si-29": 0.0006924,
+            "Si-30": 0.0004569,
+            # Carbon (≤0.08 wt% → ~0.37 atom%)
+            "C-12": 0.0036468,
+            "C-13": 3.94e-05,
+            # Phosphorus (≤0.045 wt% → ~0.08 atom%)
+            "P-31": 0.000804,
+            # Sulfur (≤0.030 wt% → ~0.05 atom%)
+            "S-32": 0.0004919,
+            "S-34": 2.2e-05,
+            "S-33": 3.9e-06,
             # Cobalt — CRITICAL impurity modeled at 1500 ppm (commercial grade)
-            # f_Co59 ≈ 1.45×10⁻³ (from wt% → atom% calculation)
-            "Co-59": 0.00145109,
+            "Co-59": 0.0014489,
             # Niobium — impurity modeled at 50 ppm (typical virgin SS-316)
-            # f_Nb93 ≈ 3.1×10⁻⁵
-            "Nb-93": 0.0000307,
+            "Nb-93": 3.07e-05,
         },
     },
     "Stainless Steel 316 (nuclear-grade impurities)": {
@@ -2360,34 +2385,50 @@ MATERIALS = {
         },
         "density_g_cc": 7.98,
         "isotopes": {
-            # Fe, Cr, Ni, Mo, Mn — identical to SS-316 (commercial-grade impurities)
-            "Fe-54": 0.0387121,
-            "Fe-56": 0.607429,
-            "Fe-57": 0.01400,
-            "Fe-58": 0.00186395,
-            "Cr-50": 0.00808716,
-            "Cr-52": 0.155881,
-            "Cr-53": 0.0176775,
-            "Cr-54": 0.00439933,
-            "Ni-58": 0.079178,
-            "Ni-60": 0.0304847,
-            "Ni-61": 0.00132281,
-            "Ni-62": 0.00422897,
-            "Ni-64": 0.00107228,
-            "Mo-92": 0.00215457,
-            "Mo-94": 0.00136289,
-            "Mo-95": 0.00234498,
-            "Mo-96": 0.00246523,
-            "Mo-97": 0.00142302,
-            "Mo-98": 0.00361768,
-            "Mo-100": 0.00145308,
-            "Mn-55": 0.0207039,
+            # Full ASTM A240 SS-316 bulk composition — identical to baseline vector, renormalized with Co-59 + Nb-93
+            # Iron (65 wt% → ~64.5 atom%)
+            "Fe-56": 0.5972809,
+            "Fe-54": 0.0380486,
+            "Fe-57": 0.0137938,
+            "Fe-58": 0.0018357,
+            # Chromium (17 wt% → ~17.4 atom%)
+            "Cr-52": 0.1518215,
+            "Cr-53": 0.0172153,
+            "Cr-50": 0.0078729,
+            "Cr-54": 0.0042852,
+            # Nickel (12 wt% → ~11.5 atom%)
+            "Ni-58": 0.077137,
+            "Ni-60": 0.0297129,
+            "Ni-62": 0.0041177,
+            "Ni-61": 0.0012918,
+            "Ni-64": 0.0010492,
+            # Molybdenum (2.5 wt% → ~1.47 atom%)
+            "Mo-98": 0.0035219,
+            "Mo-96": 0.0024071,
+            "Mo-95": 0.0022873,
+            "Mo-92": 0.0020981,
+            "Mo-100": 0.0014179,
+            "Mo-97": 0.0013863,
+            "Mo-94": 0.0013213,
+            # Manganese (2 wt% → ~2.05 atom%)
+            "Mn-55": 0.0201755,
+            # Silicon (≤0.75 wt% → ~1.48 atom%)
+            "Si-28": 0.0136483,
+            "Si-29": 0.0006933,
+            "Si-30": 0.0004576,
+            # Carbon (≤0.08 wt% → ~0.37 atom%)
+            "C-12": 0.0036518,
+            "C-13": 3.95e-05,
+            # Phosphorus (≤0.045 wt% → ~0.08 atom%)
+            "P-31": 0.0008051,
+            # Sulfur (≤0.030 wt% → ~0.05 atom%)
+            "S-32": 0.0004925,
+            "S-34": 2.2e-05,
+            "S-33": 3.9e-06,
             # Cobalt — nuclear grade: ≤100 ppm
-            # f_Co59 ≈ 9.6×10⁻⁵
-            "Co-59": 0.0000960,
+            "Co-59": 9.6e-05,
             # Niobium — scrap-free melt: ~20 ppm
-            # f_Nb93 ≈ 1.2×10⁻⁵
-            "Nb-93": 0.0000122,
+            "Nb-93": 1.22e-05,
         },
     },
 
@@ -2491,18 +2532,18 @@ MATERIALS = {
         },
         "density_g_cc": 19.30,
         "isotopes": {
-            # Bulk W isotopics (IUPAC 2021)
-            "W-180": 0.0012,
-            "W-182": 0.2650,
-            "W-183": 0.1431,
-            "W-184": 0.3064,
-            "W-186": 0.2843,
+            # Bulk W isotopics (IUPAC 2021), renormalized with impurities to sum=1
+            "W-184": 0.3063797,
+            "W-186": 0.2842811,
+            "W-182": 0.2649824,
+            "W-183": 0.1430905,
+            "W-180": 0.0011999,
             # Tantalum impurity at ITER spec max (50 ppm)
             # f_Ta181 ≈ (50e-6 / 180.948) / (1/183.84) ≈ 5.08×10⁻⁵
-            "Ta-181": 0.0000508,
+            "Ta-181": 5.08e-05,
             # Cobalt impurity at ITER spec max (5 ppm)
             # f_Co59 ≈ (5e-6 / 58.933) / (1/183.84) ≈ 1.56×10⁻⁵
-            "Co-59": 0.0000156,
+            "Co-59": 1.56e-05,
         },
     },
     "Tungsten (industrial impurities)": {
@@ -2521,17 +2562,18 @@ MATERIALS = {
         },
         "density_g_cc": 19.30,
         "isotopes": {
-            "W-180": 0.0012,
-            "W-182": 0.2650,
-            "W-183": 0.1431,
-            "W-184": 0.3064,
-            "W-186": 0.2843,
+            # Bulk W isotopics (IUPAC 2021), renormalized with impurities to sum=1
+            "W-184": 0.3062779,
+            "W-186": 0.2841867,
+            "W-182": 0.2648944,
+            "W-183": 0.143043,
+            "W-180": 0.0011995,
             # Tantalum impurity at industrial grade (~300 ppm)
             # f_Ta181 ≈ (300e-6 / 180.948) / (1/183.84) ≈ 3.05×10⁻⁴
-            "Ta-181": 0.000305,
+            "Ta-181": 0.0003049,
             # Cobalt impurity at ~30 ppm (mid-range industrial)
             # f_Co59 ≈ (30e-6 / 58.933) / (1/183.84) ≈ 9.36×10⁻⁵
-            "Co-59": 0.0000936,
+            "Co-59": 9.36e-05,
         },
     },
     "Iron (natural)": {
@@ -2630,8 +2672,9 @@ MATERIALS = {
     "Carbon Steel A36 (baseline)": {
         "category":    "steel",
         "description": "ASTM A36 structural carbon steel — BASELINE (no impurities modeled). "
-                       "Nominal bulk: 98.5 wt% Fe, 1.5 wt% Mn. "
-                       "C/Si traces and all impurities (Co, Cu, Ni, Nb) are NOT included. "
+                       "Bulk: ~96.6 wt% Fe, 1.0 wt% Mn, 0.25 wt% C, 0.40 wt% Si (ASTM A36 spec-representative). "
+                       "Co, Cu, and Ni impurities are NOT included. "
+                       "Carbon and silicon are standard A36 alloying elements and are part of the bulk composition. "
                        "Use as a clean lower-bound reference; for realistic activation including "
                        "scrap-origin Co/Cu/Ni impurities use 'Carbon Steel A36 (with impurities)'.",
         "impurities": {
@@ -2641,13 +2684,20 @@ MATERIALS = {
         },
         "density_g_cc": 7.85,
         "isotopes": {
-            # Iron (98.5 wt% → 98.48 atom%)
-            "Fe-54": 0.05756,
-            "Fe-56": 0.90355,
-            "Fe-57": 0.02087,
-            "Fe-58": 0.00278,
-            # Manganese (1.5 wt% → 1.52 atom%)
-            "Mn-55": 0.01524,
+            # Iron (~96.6 wt% → ~89.0 atom% — reduced from 98.5% to accommodate C and Si)
+            "Fe-56": 0.8902242,
+            "Fe-54": 0.0567059,
+            "Fe-57": 0.0206656,
+            "Fe-58": 0.0027369,
+            # Manganese (1.0 wt% → 1.02 atom%)
+            "Mn-55": 0.0101585,
+            # Carbon (0.25 wt% → 1.14 atom% — standard A36 alloying element)
+            "C-12": 0.011447,
+            "C-13": 0.0001229,
+            # Silicon (0.40 wt% → 0.74 atom% — standard A36 alloying element)
+            "Si-28": 0.0073217,
+            "Si-29": 0.0003706,
+            "Si-30": 0.0002467,
         },
     },
 
@@ -2678,22 +2728,28 @@ MATERIALS = {
         },
         "density_g_cc": 7.85,
         "isotopes": {
-            # Iron (97.13 wt% after impurities → 97.11 atom%)
-            "Fe-54": 0.0565259, "Fe-56": 0.887399, "Fe-57": 0.02060, "Fe-58": 0.00272822,
-            # Manganese (1.0 wt% → 1.017 atom%)
-            "Mn-55": 0.0101263,
-            # Carbon (0.25 wt% → 1.158 atom%)
-            "C-12": 0.0114107, "C-13": 1.225e-04,
-            # Silicon (0.40 wt% → 0.795 atom%)
-            "Si-28": 0.00729849, "Si-29": 3.694e-04, "Si-30": 2.459e-04,
+            # Full A36 bulk composition — identical to baseline vector, renormalized with Co/Cu/Ni impurities
+            # Iron (~88.7 atom%)
+            "Fe-56": 0.8873292,
+            "Fe-54": 0.0565215,
+            "Fe-57": 0.0205984,
+            "Fe-58": 0.002728,
+            # Manganese (1.01 atom%)
+            "Mn-55": 0.0101255,
+            # Carbon (1.14 atom% — standard A36 bulk alloying element)
+            "C-12": 0.0114098,
+            "C-13": 0.0001225,
+            # Silicon (0.74 atom% — standard A36 bulk alloying element)
+            "Si-28": 0.0072979,
+            "Si-29": 0.0003694,
+            "Si-30": 0.0002459,
             # Co impurity — 2000 ppm (conservative scrap-origin)
-            # f_Co = (2e-3/58.933) / (0.985/55.845 + 0.010/54.938 + ...) ≈ 0.00189
-            "Co-59": 0.00188188,
+            "Co-59": 0.0018758,
             # Cu impurity — 1000 ppm
-            "Cu-63": 4.769e-04, "Cu-65": 2.121e-04,
+            "Cu-63": 0.0004753, "Cu-65": 0.0002114,
             # Ni impurity — 1000 ppm
-            "Ni-58": 4.710e-04, "Ni-60": 1.812e-04, "Ni-61": 0.0000079,
-            "Ni-62": 0.0000252, "Ni-64": 0.0000064,
+            "Ni-58": 0.0004695, "Ni-60": 0.0001806,
+            "Ni-61": 7.9e-06, "Ni-62": 2.51e-05, "Ni-64": 6.4e-06,
         },
     },
 
@@ -2732,6 +2788,38 @@ MATERIALS = {
             "Ti-49": 0.0000230, "Ti-50": 0.0000221,
             # Manganese (0.075 wt% → 0.037 atom%)
             "Mn-55": 0.000371,
+        },
+    },
+
+    "Titanium (pure)": {
+        "category":    "metal",
+        "description": "Commercially pure titanium — Grade 2 (ASTM B265, most common CP-Ti grade). "
+                       "Natural Ti isotopics (IUPAC 2021): Ti-48 dominates at 73.72%. "
+                       "Density 4.506 g/cm³ (Grade 2). No impurities modeled. "
+                       "Key activation products under 14 MeV irradiation: "
+                       "Sc-46 (t½=83.79 d) from Ti-46(n,p) is the primary medium-term dose driver; "
+                       "Sc-47 (t½=3.35 d) from Ti-47(n,p); Sc-48 (t½=43.67 h) from Ti-48(n,p); "
+                       "Ti-51 (t½=5.76 min) from Ti-50(n,γ) — short-lived. "
+                       "Ti is a reduced-activation material: no long-lived dose drivers from bulk composition. "
+                       "Tramp Co impurity (Co-59→Co-60) is the key long-term risk if uncontrolled.",
+        "impurities": {
+            "Co": {"ppm_range": [None, 50], "significance": "moderate — long-term dose driver",
+                   "note": "CP-Ti typically ≤20 ppm Co (ASTM B265 Grade 2 spec). "
+                           "Co-59(n,γ)→Co-60 (t½=5.27 y) dominates long-term dose "
+                           "once short-lived Sc products have decayed (~2 y). "
+                           "Not modeled here; use a custom impurity variant if Co content is known."},
+            "Nb": {"ppm_range": [None, 100], "significance": "low-moderate",
+                   "note": "Nb-93(n,γ)→Nb-94 (t½=20,300 y). Nb ≤100 ppm in Grade 2 Ti. "
+                           "At typical ppm levels the dose contribution is small vs Sc-46."},
+        },
+        "density_g_cc": 4.506,
+        "isotopes": {
+            # Natural Ti isotopics (IUPAC 2021)
+            "Ti-46": 0.0825,
+            "Ti-47": 0.0744,
+            "Ti-48": 0.7372,
+            "Ti-49": 0.0541,
+            "Ti-50": 0.0518,
         },
     },
 
